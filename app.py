@@ -240,6 +240,12 @@ def create_enhanced_chart(df, param_seleccionado):
     )
     
     return fig
+    
+def normalize_decimal(value):
+    """Convierte comas decimales en puntos para compatibilidad móvil"""
+    if isinstance(value, str):
+        return float(value.replace(',', '.'))
+    return float(value)
 
 def main():
     # Título principal mejorado
@@ -333,14 +339,14 @@ def main():
                 
                 st.markdown("#### 🧪 Parámetros Químicos")
                 ph = st.number_input("pH", min_value=0.0, max_value=14.0, value=7.4, step=0.1)
-                fac = st.number_input("FAC (ppm)", min_value=0.0, max_value=10.0, value=1.5, step=0.1)
+                fac = st.number_input("FAC (ppm)", min_value=0.0, max_value=10.0, value=0.5, step=0.1)
                 orp = st.number_input("ORP (mV)", min_value=0, value=700, step=10)
             
             with col2:
                 st.markdown("#### 💧 Salinidad y Conductividad")
-                sal = st.number_input("Sal (ppm)", min_value=0, value=3600, step=100)
-                conductividad = st.number_input("Conductividad (µS/cm)", min_value=0, value=4500, step=100)
-                tds = st.number_input("TDS (ppm)", min_value=0, value=2250, step=50)
+                sal = st.number_input("Sal (ppm)", min_value=0, value=3000, step=100)
+                conductividad = st.number_input("Conductividad (µS/cm)", min_value=0, value=6000, step=100)
+                tds = st.number_input("TDS (ppm)", min_value=0, value=3000, step=50)
         
         # Vista previa del estado
         st.markdown("### 🚦 Vista Previa del Estado")
@@ -371,17 +377,28 @@ def main():
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             if st.button("💾 Guardar Medición", type="primary", use_container_width=True):
-                data_row = [
-                    fecha.strftime('%Y-%m-%d'),
-                    hora.strftime('%H:%M'),
-                    ph, conductividad, tds, sal, orp, fac
-                ]
-                
-                if add_data_to_sheets(sheet, data_row):
-                    st.success("✅ ¡Medición guardada correctamente!")
-                    st.balloons()
-                else:
-                    st.error("❌ Error al guardar la medición")
+                # Normalizar decimales (convertir comas en puntos)
+                try:
+                    ph_norm = normalize_decimal(ph)
+                    conductividad_norm = normalize_decimal(conductividad)
+                    tds_norm = normalize_decimal(tds)
+                    sal_norm = normalize_decimal(sal)
+                    orp_norm = normalize_decimal(orp)
+                    fac_norm = normalize_decimal(fac)
+                    
+                    data_row = [
+                        fecha.strftime('%Y-%m-%d'),
+                        hora.strftime('%H:%M'),
+                        ph_norm, conductividad_norm, tds_norm, sal_norm, orp_norm, fac_norm
+                    ]
+                    
+                    if add_data_to_sheets(sheet, data_row):
+                        st.success("✅ ¡Medición guardada correctamente!")
+                        st.balloons()
+                    else:
+                        st.error("❌ Error al guardar la medición")
+                except ValueError:
+                    st.error("⚠️ Error en formato de números. Verifica los valores introducidos.")
     
     elif tab == "📈 Gráficos":
         st.markdown("### 📈 Análisis de Tendencias")
