@@ -234,7 +234,7 @@ def create_enhanced_chart(df, param_seleccionado):
         ),
         yaxis=dict(
             gridcolor='rgba(255,255,255,0.2)',
-            showgrid=True
+            showgrid=True,
             range=[6, None] if param_seleccionado == 'pH' else None
         )
     )
