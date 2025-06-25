@@ -17,21 +17,32 @@ st.set_page_config(
 
 # CSS personalizado para mejorar la apariencia
 st.markdown("""
+Perfecto, te indico exactamente dónde hacer los cambios para mantener el fondo blanco y letras oscuras. Solo necesitas modificar la sección de CSS:
+🎯 Cambios Específicos en el CSS
+Busca esta sección en el código (líneas 21-132 aproximadamente):
+pythonst.markdown("""
 <style>
     /* Tema oscuro personalizado */
     .stApp {
         background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
     }
+REEMPLAZA todo el bloque de CSS por este:
+pythonst.markdown("""
+<style>
+    /* Tema claro personalizado */
+    .stApp {
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    }
     
     /* Tarjetas de métricas mejoradas */
     .metric-card {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.9);
         backdrop-filter: blur(10px);
         border-radius: 15px;
         padding: 20px;
         margin: 10px 0;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
         text-align: center;
     }
     
@@ -45,19 +56,19 @@ st.markdown("""
         animation: pulse 2s infinite;
     }
     
-    .status-optimal { background-color: #00ff00; }
-    .status-warning { background-color: #ffa500; }
-    .status-critical { background-color: #ff0000; }
+    .status-optimal { background-color: #28a745; }
+    .status-warning { background-color: #ffc107; }
+    .status-critical { background-color: #dc3545; }
     
     @keyframes pulse {
         0% { opacity: 1; }
-        50% { opacity: 0.5; }
+        50% { opacity: 0.7; }
         100% { opacity: 1; }
     }
     
     /* Sidebar mejorado */
     .css-1d391kg {
-        background: rgba(255, 255, 255, 0.05);
+        background: rgba(248, 249, 250, 0.95);
         backdrop-filter: blur(10px);
     }
     
@@ -70,12 +81,12 @@ st.markdown("""
         font-weight: bold;
         padding: 0.5rem 2rem;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 15px 0 rgba(116, 79, 168, 0.75);
+        box-shadow: 0 4px 15px 0 rgba(116, 79, 168, 0.3);
     }
     
     .stButton > button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px 0 rgba(116, 79, 168, 0.9);
+        box-shadow: 0 6px 20px 0 rgba(116, 79, 168, 0.5);
     }
     
     /* Títulos mejorados */
@@ -92,26 +103,27 @@ st.markdown("""
     
     /* Dashboard cards */
     .dashboard-card {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.9);
         backdrop-filter: blur(15px);
         border-radius: 20px;
         padding: 25px;
         margin: 15px 0;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
         transition: transform 0.3s ease;
     }
     
     .dashboard-card:hover {
         transform: translateY(-5px);
+        box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.15);
     }
     
     /* Número grande para métricas */
     .big-number {
         font-size: 2.5rem;
         font-weight: bold;
-        color: #ffffff;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        color: #212529;
+        text-shadow: none;
     }
     
     /* Texto de estado */
@@ -119,6 +131,7 @@ st.markdown("""
         font-size: 1.1rem;
         font-weight: 600;
         margin-top: 5px;
+        color: #212529;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -217,7 +230,7 @@ def create_dashboard_card(title, value, unit, status, icon):
     <div class="dashboard-card">
         <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
             <span style="font-size: 2rem; margin-right: 10px;">{icon}</span>
-            <h3 style="color: white; margin: 0;">{title}</h3>
+            <h3 style="color: #212529; margin: 0;">{title}</h3>
         </div>
         <div class="big-number">{value} <span style="font-size: 1.5rem;">{unit}</span></div>
         <div style="display: flex; align-items: center; justify-content: center; margin-top: 10px;">
@@ -266,13 +279,13 @@ def create_enhanced_chart(df, param_seleccionado):
     fig.update_layout(
         title=f"📈 Evolución de {param_seleccionado}",
         title_font_size=20,
-        title_font_color="white",
+        title_font_color="#212529",
         xaxis_title="Fecha y Hora",
         yaxis_title=f"{param_seleccionado} ({RANGES.get(param_seleccionado, {}).get('unit', '')})",
         height=500,
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        font_color="white",
+        font_color="#212529",
         xaxis=dict(
             gridcolor='rgba(255,255,255,0.2)',
             showgrid=True
@@ -589,7 +602,7 @@ def main():
                     <div style="display: flex; align-items: center; justify-content: space-between;">
                         <div style="display: flex; align-items: center;">
                             <span style="font-size: 1.5rem; margin-right: 10px;">{info['icon']}</span>
-                            <strong style="color: white; font-size: 1.2rem;">{param}</strong>
+                            <strong style="color: #212529; font-size: 1.2rem;">{param}</strong>
                         </div>
                         <div style="text-align: right;">
                             <div style="color: {status_optimal['color']}; font-weight: bold;">
@@ -606,7 +619,7 @@ def main():
             <div class="dashboard-card">
                 <div style="text-align: center;">
                     <div style="font-size: 3rem;">🏊‍♂️</div>
-                    <h3 style="color: white;">Piscina Perfecta</h3>
+                    <h3 style="color: #212529;">Piscina Perfecta</h3>
                     <p style="color: #cccccc;">
                         Todos los parámetros en rango óptimo garantizan:
                     </p>
