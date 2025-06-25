@@ -218,7 +218,7 @@ def create_enhanced_chart(df, param_seleccionado):
                      layer="below", line_width=0)
     
     # Tema oscuro para el gráfico
-    fig.update_layout(
+     fig.update_layout(
         title=f"📈 Evolución de {param_seleccionado}",
         title_font_size=20,
         title_font_color="#212529",
@@ -234,7 +234,8 @@ def create_enhanced_chart(df, param_seleccionado):
         ),
         yaxis=dict(
             gridcolor='rgba(255,255,255,0.2)',
-            showgrid=True
+            showgrid=True,
+            range=[6, None] if param_seleccionado == 'pH' else None
         )
     )
     
