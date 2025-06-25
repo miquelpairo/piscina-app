@@ -235,12 +235,30 @@ def create_enhanced_chart(df, param_seleccionado):
         yaxis=dict(
             gridcolor='rgba(255,255,255,0.2)',
             showgrid=True,
-            range=[6, 8.5] if param_seleccionado == 'pH' else None
+            range=get_chart_range(param_seleccionado)
         )
     )
     
     return fig
     
+def normalize_decimal(value):
+    """Convierte comas decimales en puntos para compatibilidad móvil"""
+    if isinstance(value, str):
+        return float(value.replace(',', '.'))
+    return float(value)
+
+def get_chart_range(param):
+    """Define rangos personalizados para cada parámetro en los gráficos"""
+    ranges = {
+        'pH': [6, 8.5],
+        'Sal': [2000, 4000],
+        'Conductividad': [2000, 7000],
+        'TDS': [1000, 3500],
+        'ORP': [200, 800],
+        'FAC': [0, 3]
+    }
+    return ranges.get(param, None)
+
 def normalize_decimal(value):
     """Convierte comas decimales en puntos para compatibilidad móvil"""
     if isinstance(value, str):
