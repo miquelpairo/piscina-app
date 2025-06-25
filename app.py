@@ -17,27 +17,13 @@ st.set_page_config(
 
 # CSS personalizado para mejorar la apariencia
 st.markdown("""
-Perfecto, te indico exactamente dónde hacer los cambios para mantener el fondo blanco y letras oscuras. Solo necesitas modificar la sección de CSS:
-🎯 Cambios Específicos en el CSS
-Busca esta sección en el código (líneas 21-132 aproximadamente):
-pythonst.markdown("""
 <style>
-    /* Tema oscuro personalizado */
     .stApp {
-        background: linear-gradient(to bottom right, \\#f8f9fa 0%, \\#ffffff 100%);
-    }
-REEMPLAZA todo el bloque de CSS por este:
-pythonst.markdown("""
-<style>
-    /* Tema claro personalizado */
-    .stApp {
-        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        background: linear-gradient(to bottom right, #f8f9fa 0%, #ffffff 100%);
     }
     
-    /* Tarjetas de métricas mejoradas */
     .metric-card {
         background: rgba(255, 255, 255, 0.9);
-        backdrop-filter: blur(10px);
         border-radius: 15px;
         padding: 20px;
         margin: 10px 0;
@@ -46,87 +32,43 @@ pythonst.markdown("""
         text-align: center;
     }
     
-    /* Indicadores tipo semáforo */
     .status-indicator {
         width: 20px;
         height: 20px;
         border-radius: 50%;
         display: inline-block;
         margin-right: 8px;
-        animation: pulse 2s infinite;
     }
     
     .status-optimal { background-color: #28a745; }
     .status-warning { background-color: #ffc107; }
     .status-critical { background-color: #dc3545; }
     
-    @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.7; }
-        100% { opacity: 1; }
-    }
-    
-    /* Sidebar mejorado */
-    .css-1d391kg {
-        background: rgba(248, 249, 250, 0.95);
-        backdrop-filter: blur(10px);
-    }
-    
-    /* Botones mejorados */
     .stButton > button {
-        background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(to top right, #667eea 0%, #764ba2 100%);
         border: none;
         border-radius: 25px;
         color: white;
         font-weight: bold;
         padding: 0.5rem 2rem;
-        transition: all 0.3s ease;
         box-shadow: 0 4px 15px 0 rgba(116, 79, 168, 0.3);
     }
     
-    .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px 0 rgba(116, 79, 168, 0.5);
-    }
-    
-    /* Títulos mejorados */
-    .main-title {
-        background: linear-gradient(45deg, #667eea, #764ba2);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        font-size: 3rem;
-        font-weight: bold;
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-    
-    /* Dashboard cards */
     .dashboard-card {
         background: rgba(255, 255, 255, 0.9);
-        backdrop-filter: blur(15px);
         border-radius: 20px;
         padding: 25px;
         margin: 15px 0;
         border: 1px solid rgba(0, 0, 0, 0.1);
         box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
-        transition: transform 0.3s ease;
     }
     
-    .dashboard-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.15);
-    }
-    
-    /* Número grande para métricas */
     .big-number {
         font-size: 2.5rem;
         font-weight: bold;
         color: #212529;
-        text-shadow: none;
     }
     
-    /* Texto de estado */
     .status-text {
         font-size: 1.1rem;
         font-weight: 600;
