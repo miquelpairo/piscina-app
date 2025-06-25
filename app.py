@@ -24,7 +24,7 @@ pythonst.markdown("""
 <style>
     /* Tema oscuro personalizado */
     .stApp {
-        background: linear-gradient(135deg, \\#1e3c72 0%, #2a5298 100%);
+        background: linear-gradient(to bottom right, \\#f8f9fa 0%, \\#ffffff 100%);
     }
 REEMPLAZA todo el bloque de CSS por este:
 pythonst.markdown("""
