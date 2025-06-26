@@ -181,8 +181,8 @@ def add_maintenance_to_sheets(mant_sheet, data):
 # Rangos óptimos para piscina de sal
 RANGES = {
     'pH': {'min': 7.2, 'max': 7.6, 'unit': '', 'icon': '🧪'},
-    'Conductividad': {'min': 3000, 'max': 6000, 'unit': 'µS/cm', 'icon': '⚡'},
-    'TDS': {'min': 1500, 'max': 3000, 'unit': 'ppm', 'icon': '💧'},
+    'Conductividad': {'min': 4000, 'max': 8000, 'unit': 'µS/cm', 'icon': '⚡'},
+    'TDS': {'min': 2000, 'max': 4500, 'unit': 'ppm', 'icon': '💧'},
     'Sal': {'min': 2700, 'max': 4500, 'unit': 'ppm', 'icon': '🧂'},
     'ORP': {'min': 650, 'max': 750, 'unit': 'mV', 'icon': '🔋'},
     'FAC': {'min': 1.0, 'max': 3.0, 'unit': 'ppm', 'icon': '🟢'}
@@ -380,25 +380,37 @@ def analyze_alerts(df, mant_sheet=None):
                 })
     
     # 4. Mantenimiento vencido (si se proporciona mant_sheet)
+    # 4. Mantenimiento vencido (si se proporciona mant_sheet)
     if mant_sheet:
         try:
             maint_df = get_maintenance_data(mant_sheet)
             if not maint_df.empty and 'Proximo_Mantenimiento' in maint_df.columns:
-                overdue = maint_df[
-                    (maint_df['Proximo_Mantenimiento'].notna()) & 
-                    (maint_df['Proximo_Mantenimiento'] <= pd.Timestamp.now())
-                ]
-                if not overdue.empty:
+                # Filtrar mantenimientos vencidos
+                overdue_tasks = []
+                
+                for _, task in maint_df.iterrows():
+                    if pd.notna(task['Proximo_Mantenimiento']) and task['Proximo_Mantenimiento'] <= pd.Timestamp.now():
+                        # Verificar si ya se hizo mantenimiento del mismo tipo después de la fecha programada
+                        same_type_after = maint_df[
+                            (maint_df['Tipo'] == task['Tipo']) & 
+                            (maint_df['Fecha'] > task['Proximo_Mantenimiento'])
+                        ]
+                        
+                        # Si no hay mantenimiento del mismo tipo posterior, sigue vencido
+                        if same_type_after.empty:
+                            overdue_tasks.append(task)
+                
+                if overdue_tasks:
                     alerts.append({
                         'type': 'maintenance',
                         'title': '🔧 Mantenimiento Vencido',
-                        'message': f"{len(overdue)} tarea(s) de mantenimiento pendiente(s)",
-                        'details': overdue[['Tipo', 'Proximo_Mantenimiento']].to_dict('records'),
+                        'message': f"{len(overdue_tasks)} tarea(s) de mantenimiento pendiente(s)",
+                        'details': [{'Tipo': t['Tipo'], 'Proximo_Mantenimiento': t['Proximo_Mantenimiento']} for t in overdue_tasks],
                         'priority': 'high'
                     })
         except Exception:
             pass  # Si hay error con mantenimiento, no mostrar alerta
-    
+            
     return alerts
 
 def display_alerts(alerts):
