@@ -929,7 +929,69 @@ def main():
                         
                     except Exception as e:
                         st.error(f"❌ Error al guardar: {e}")
-        
+            
+            # Mostrar próximos mantenimientos programados
+            st.markdown("---")
+            st.markdown("#### 📅 Próximos Mantenimientos Programados")
+            
+            try:
+                maint_df = get_maintenance_data(mant_sheet)
+                if not maint_df.empty and 'Proximo_Mantenimiento' in maint_df.columns:
+                    # Filtrar solo mantenimientos futuros con fechas válidas
+                    future_maint = maint_df[
+                        (maint_df['Proximo_Mantenimiento'].notna()) & 
+                        (maint_df['Proximo_Mantenimiento'] > pd.Timestamp.now())
+                    ].copy()
+                    
+                    if not future_maint.empty:
+                        # Obtener el próximo mantenimiento de cada tipo
+                        next_maint_by_type = future_maint.groupby('Tipo')['Proximo_Mantenimiento'].min().reset_index()
+                        next_maint_by_type = next_maint_by_type.sort_values('Proximo_Mantenimiento')
+                        
+                        # Mostrar en tarjetas
+                        if len(next_maint_by_type) <= 3:
+                            cols = st.columns(len(next_maint_by_type))
+                        else:
+                            cols = st.columns(3)
+                        
+                        for i, (_, maint) in enumerate(next_maint_by_type.iterrows()):
+                            with cols[i % 3]:
+                                days_until = (maint['Proximo_Mantenimiento'].date() - pd.Timestamp.now().date()).days
+                                
+                                # Color según proximidad
+                                if days_until <= 2:
+                                    color = "#ff6b6b"  # Rojo - Muy próximo
+                                    icon = "🔴"
+                                elif days_until <= 7:
+                                    color = "#ffa726"  # Naranja - Próximo
+                                    icon = "🟠"
+                                else:
+                                    color = "#4caf50"  # Verde - Lejano
+                                    icon = "🟢"
+                                
+                                st.markdown(f"""
+                                <div style="background: rgba(255, 255, 255, 0.9); border-radius: 10px; 
+                                           padding: 15px; margin: 5px; text-align: center;
+                                           border-left: 4px solid {color};">
+                                    <div style="font-size: 1.2rem;">{icon}</div>
+                                    <div style="font-weight: bold; color: #333; margin: 5px 0;">
+                                        {maint['Tipo']}
+                                    </div>
+                                    <div style="color: {color}; font-weight: bold;">
+                                        {maint['Proximo_Mantenimiento'].strftime('%d/%m/%Y')}
+                                    </div>
+                                    <div style="color: #666; font-size: 0.9rem;">
+                                        {days_until} día{'s' if days_until != 1 else ''}
+                                    </div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                    else:
+                        st.info("📅 No hay mantenimientos programados próximamente.")
+                else:
+                    st.info("📅 No hay datos de mantenimiento programado.")
+            except Exception as e:
+                st.error(f"Error mostrando próximos mantenimientos: {e}")
+            
         else:  # Historial Mantenimiento
             st.markdown("#### 📋 Historial de Mantenimiento")
             
