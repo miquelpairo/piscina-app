@@ -322,7 +322,7 @@ def analyze_alerts(df, mant_sheet=None):
     
     # 1. Alertas por parámetros críticos
     critical_params = []
-    for param in ['pH', 'Sal', 'FAC', 'ORP']:
+    for param in ['pH', 'Sal', 'FAC', 'ORP', 'TDS', 'Conductividad']:
         if param in latest_data:
             status = check_parameter_status(latest_data[param], param)
             if status in ['low', 'high']:
