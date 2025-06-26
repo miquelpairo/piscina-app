@@ -512,13 +512,6 @@ def main():
         # Analizar alertas
         alerts = analyze_alerts(df, mant_sheet)
         
-        # Mostrar alertas si existen
-        if alerts:
-            display_alerts(alerts)
-        else:
-            st.success("✅ No hay alertas. ¡Tu piscina está en perfecto estado!")
-            st.markdown("---")
-        
         # Datos más recientes
         latest_data = df.iloc[-1]
         
@@ -539,8 +532,14 @@ def main():
                     card_html = create_dashboard_card(param, value, unit, status, icon)
                     st.markdown(card_html, unsafe_allow_html=True)
         
+        # Mostrar alertas debajo del estado actual
+        if alerts:
+            display_alerts(alerts)
+        else:
+            st.success("✅ No hay alertas. ¡Tu piscina está en perfecto estado!")
+
         # Resumen general
-        st.markdown("### 🎯 Resumen del Estado")
+        st.markdown("### 🎯 Resumen del Estado"
         
         params_status = {}
         for param in params:
