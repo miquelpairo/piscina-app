@@ -312,6 +312,163 @@ def get_chart_range(param):
         'FAC': [0, 3]
     }
     return ranges.get(param, None)
+def analyze_alerts(df, mant_sheet=None):
+    """Analiza los datos y genera alertas para el dashboard"""
+    alerts = []
+    
+    if df.empty:
+        return alerts
+    
+    latest_data = df.iloc[-1]
+    
+    # 1. Alertas por parámetros críticos
+    critical_params = []
+    for param in ['pH', 'Sal', 'FAC', 'ORP']:
+        if param in latest_data:
+            status = check_parameter_status(latest_data[param], param)
+            if status in ['low', 'high']:
+                critical_params.append({
+                    'param': param,
+                    'value': latest_data[param],
+                    'status': status,
+                    'unit': RANGES.get(param, {}).get('unit', ''),
+                    'icon': RANGES.get(param, {}).get('icon', '⚠️')
+                })
+    
+    if critical_params:
+        alerts.append({
+            'type': 'critical',
+            'title': '🚨 Parámetros Críticos',
+            'message': f"{len(critical_params)} parámetro(s) fuera de rango",
+            'details': critical_params,
+            'priority': 'high'
+        })
+    
+    # 2. Alerta por días sin medición
+    days_since = (pd.Timestamp.now().date() - latest_data['Dia'].date()).days
+    if days_since >= 3:
+        alerts.append({
+            'type': 'maintenance',
+            'title': '📅 Medición Pendiente',
+            'message': f"Han pasado {days_since} días desde la última medición",
+            'priority': 'medium' if days_since < 7 else 'high'
+        })
+    
+    # 3. Alertas de tendencias (últimos 3 registros)
+    if len(df) >= 3:
+        recent_data = df.tail(3)
+        
+        # pH tendencia descendente crítica
+        if 'pH' in recent_data.columns:
+            ph_trend = recent_data['pH'].tolist()
+            if all(ph_trend[i] > ph_trend[i+1] for i in range(len(ph_trend)-1)) and ph_trend[-1] < 7.0:
+                alerts.append({
+                    'type': 'trend',
+                    'title': '📉 pH en Descenso',
+                    'message': f"pH bajando consistentemente. Actual: {ph_trend[-1]}",
+                    'priority': 'medium'
+                })
+        
+        # FAC consistentemente bajo
+        if 'FAC' in recent_data.columns:
+            fac_values = recent_data['FAC'].tolist()
+            if all(val < 1.0 for val in fac_values):
+                alerts.append({
+                    'type': 'trend',
+                    'title': '🟡 FAC Persistentemente Bajo',
+                    'message': f"FAC por debajo de 1.0 ppm en últimas 3 mediciones",
+                    'priority': 'medium'
+                })
+    
+    # 4. Mantenimiento vencido (si se proporciona mant_sheet)
+    if mant_sheet:
+        try:
+            maint_df = get_maintenance_data(mant_sheet)
+            if not maint_df.empty and 'Proximo_Mantenimiento' in maint_df.columns:
+                overdue = maint_df[
+                    (maint_df['Proximo_Mantenimiento'].notna()) & 
+                    (maint_df['Proximo_Mantenimiento'] <= pd.Timestamp.now())
+                ]
+                if not overdue.empty:
+                    alerts.append({
+                        'type': 'maintenance',
+                        'title': '🔧 Mantenimiento Vencido',
+                        'message': f"{len(overdue)} tarea(s) de mantenimiento pendiente(s)",
+                        'details': overdue[['Tipo', 'Proximo_Mantenimiento']].to_dict('records'),
+                        'priority': 'high'
+                    })
+        except Exception:
+            pass  # Si hay error con mantenimiento, no mostrar alerta
+    
+    return alerts
+
+def display_alerts(alerts):
+    """Muestra las alertas en el dashboard con estilos apropiados"""
+    if not alerts:
+        return
+    
+    st.markdown("### 🚨 Alertas del Sistema")
+    
+    # Separar por prioridad
+    high_priority = [a for a in alerts if a.get('priority') == 'high']
+    medium_priority = [a for a in alerts if a.get('priority') == 'medium']
+    
+    # Alertas de alta prioridad
+    for alert in high_priority:
+        color = "#dc3545"  # Rojo
+        icon = "🚨"
+        
+        st.markdown(f"""
+        <div style="background: linear-gradient(90deg, {color}15 0%, {color}05 100%); 
+                    border-left: 4px solid {color}; padding: 15px; margin: 10px 0; 
+                    border-radius: 8px;">
+            <div style="display: flex; align-items: center;">
+                <span style="font-size: 1.5rem; margin-right: 10px;">{icon}</span>
+                <div>
+                    <strong style="color: {color}; font-size: 1.1rem;">{alert['title']}</strong>
+                    <div style="color: #666; margin-top: 5px;">{alert['message']}</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Mostrar detalles si existen
+        if 'details' in alert:
+            if alert['type'] == 'critical':
+                cols = st.columns(len(alert['details']))
+                for i, detail in enumerate(alert['details']):
+                    with cols[i]:
+                        status_text = "ALTO" if detail['status'] == 'high' else "BAJO"
+                        st.markdown(f"""
+                        <div style="text-align: center; padding: 10px; background: rgba(220,53,69,0.1); 
+                                   border-radius: 8px; margin: 5px;">
+                            <div style="font-size: 1.2rem;">{detail['icon']}</div>
+                            <div style="font-weight: bold;">{detail['param']}</div>
+                            <div style="color: {color};">{detail['value']} {detail['unit']}</div>
+                            <div style="color: {color}; font-size: 0.9rem;">{status_text}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+    
+    # Alertas de prioridad media
+    for alert in medium_priority:
+        color = "#ffc107"  # Amarillo/Naranja
+        icon = "⚠️"
+        
+        st.markdown(f"""
+        <div style="background: linear-gradient(90deg, {color}15 0%, {color}05 100%); 
+                    border-left: 4px solid {color}; padding: 12px; margin: 8px 0; 
+                    border-radius: 8px;">
+            <div style="display: flex; align-items: center;">
+                <span style="font-size: 1.2rem; margin-right: 10px;">{icon}</span>
+                <div>
+                    <strong style="color: {color}; font-size: 1rem;">{alert['title']}</strong>
+                    <div style="color: #666; margin-top: 3px; font-size: 0.9rem;">{alert['message']}</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("---")
 
 def normalize_decimal(value):
     """Convierte comas decimales en puntos para compatibilidad móvil"""
@@ -352,6 +509,16 @@ def main():
         if df.empty:
             st.info("📊 No hay datos disponibles. Añade tu primera medición.")
             return
+        
+        # Analizar alertas
+        alerts = analyze_alerts(df, mant_sheet)
+        
+        # Mostrar alertas si existen
+        if alerts:
+            display_alerts(alerts)
+        else:
+            st.success("✅ No hay alertas. ¡Tu piscina está en perfecto estado!")
+            st.markdown("---")
         
         # Datos más recientes
         latest_data = df.iloc[-1]
