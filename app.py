@@ -539,7 +539,7 @@ def main():
             st.success("✅ No hay alertas. ¡Tu piscina está en perfecto estado!")
 
         # Resumen general
-        st.markdown("### 🎯 Resumen del Estado"
+        st.markdown("### 🎯 Resumen del Estado")
         
         params_status = {}
         for param in params:
