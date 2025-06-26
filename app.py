@@ -303,9 +303,7 @@ def main():
                        "📋 Historial", "ℹ️ Rangos Óptimos"],
                       index=0)
         
-        st.markdown("---")
-        st.markdown("### 🔧 Configuración")
-        modo_oscuro = st.checkbox("🌙 Modo Oscuro", value=True)
+
         
     if tab == "🏠 Dashboard":
         # Obtener datos más recientes
@@ -488,13 +486,27 @@ def main():
         params_multi = st.multiselect("Selecciona parámetros:", parametros, default=['pH', 'FAC'])
         
         if params_multi:
-            # Normalizar datos para comparación
+            # Normalizar datos con rangos ampliados para mejor visualización
             df_normalized = df.copy()
+
+            # Rangos ampliados para visualización (más margen que los rangos óptimos)
+            visualization_ranges = {
+                'pH': {'min': 6.5, 'max': 8.0},           # Óptimo: 7.2-7.6
+                'Sal': {'min': 2000, 'max': 5000},        # Óptimo: 2700-4500  
+                'Conductividad': {'min': 2000, 'max': 7000}, # Óptimo: 3000-6000
+                'TDS': {'min': 1000, 'max': 3500},        # Óptimo: 1500-3000
+                'ORP': {'min': 500, 'max': 900},          # Óptimo: 650-750 (mucho más margen)
+                'FAC': {'min': 0, 'max': 5}              # Óptimo: 1.0-3.0
+            }
+
             for param in params_multi:
-                if param in RANGES:
-                    min_val = RANGES[param]['min']
-                    max_val = RANGES[param]['max']
+                if param in visualization_ranges:
+                    min_val = visualization_ranges[param]['min']
+                    max_val = visualization_ranges[param]['max']
                     df_normalized[f'{param}_norm'] = ((df[param] - min_val) / (max_val - min_val)) * 100
+                else:
+                    # Si no tiene rango de visualización, usar valores reales
+                    df_normalized[f'{param}_norm'] = df[param]
             
             fig_multi = go.Figure()
             colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe']
@@ -509,10 +521,17 @@ def main():
                     marker=dict(size=8)
                 ))
             
+            # Líneas de referencia basadas en rangos óptimos, no de visualización
             fig_multi.add_hline(y=100, line_dash="dash", line_color="orange", 
-                               annotation_text="Límite superior")
+                               annotation_text="Límite superior visualización")
             fig_multi.add_hline(y=0, line_dash="dash", line_color="orange", 
-                               annotation_text="Límite inferior")
+                               annotation_text="Límite inferior visualización")
+
+            # Añadir zona óptima (50% aproximadamente para la mayoría)
+            fig_multi.add_hrect(y0=25, y1=75, fillcolor="rgba(0, 255, 0, 0.1)", 
+                               layer="below", line_width=0, 
+                               annotation_text="Zona típicamente óptima")
+
             
             fig_multi.update_layout(
                 title="📊 Comparativa Normalizada de Parámetros",
