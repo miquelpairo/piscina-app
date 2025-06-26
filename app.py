@@ -792,27 +792,6 @@ def main():
             else:
                 st.info("📊 No hay registros de mantenimiento aún.")
             
-            # Mockup de cómo se vería
-            st.markdown("##### 🔍 Filtros")
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                filtro_tipo = st.multiselect("Tipo:", ["Limpieza filtro bolas", "Aspirado fondo", "Calibración sondas"])
-            with col2:
-                desde = st.date_input("Desde:", value=date.today() - pd.Timedelta(days=30))
-            with col3:
-                hasta = st.date_input("Hasta:", value=date.today())
-                
-            # Ejemplo de datos
-            ejemplo_data = {
-                "Fecha": ["2024-12-20", "2024-12-15", "2024-12-10"],
-                "Tipo": ["Limpieza filtro bolas", "Aspirado fondo", "Calibración sondas"],
-                "Tiempo": ["45 min", "30 min", "15 min"],
-                "Estado previo": ["Regular", "Malo", "Bueno"],
-                "Próximo": ["2024-12-27", "2024-12-22", "2024-12-25"]
-            }
-            
-            st.dataframe(pd.DataFrame(ejemplo_data), use_container_width=True)
-
   
     elif tab == "ℹ️ Rangos Óptimos":
         st.markdown("### 📚 Guía Completa de Parámetros")
