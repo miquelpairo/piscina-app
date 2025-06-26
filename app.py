@@ -602,7 +602,7 @@ def main():
                     else:
                         cols = st.columns(3)
                     
-                    for i, (_, maint) in enumerate(next_mant.iterrows()):
+                    for i, (_, maint) in enumerate(next_maint.iterrows()):
                         with cols[i % 3]:
                             days_until = (maint['Proximo_Mantenimiento'].date() - pd.Timestamp.now().date()).days
                             
