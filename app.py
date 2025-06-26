@@ -257,14 +257,12 @@ def get_chart_range(param):
 def normalize_decimal(value):
     """Convierte comas decimales en puntos para compatibilidad móvil"""
     try:
-        if isinstance(value, str):
-            # Reemplazar coma por punto
-            value_str = str(value).replace(',', '.')
-            return float(value_str)
-        return float(value)
+        # Convertir a string primero para manejar cualquier tipo
+        value_str = str(value).replace(',', '.')
+        # Convertir a float y luego de vuelta a string para eliminar comas
+        return str(float(value_str))
     except (ValueError, TypeError):
-        # Si no se puede convertir, devolver 0
-        return 0.0
+        return "0.0"
 
 def main():
     # Título principal mejorado
@@ -411,12 +409,12 @@ def main():
             if st.button("💾 Guardar Medición", type="primary", use_container_width=True):
                 # Normalizar decimales (convertir comas en puntos)
                 try:
-                    ph_norm = normalize_decimal(ph)
-                    conductividad_norm = normalize_decimal(conductividad)
-                    tds_norm = normalize_decimal(tds)
-                    sal_norm = normalize_decimal(sal)
-                    orp_norm = normalize_decimal(orp)
-                    fac_norm = normalize_decimal(fac)
+                    ph_norm = str(float(str(ph).replace(',', '.')))
+                    conductividad_norm = str(float(str(conductividad).replace(',', '.')))
+                    tds_norm = str(float(str(tds).replace(',', '.')))
+                    sal_norm = str(float(str(sal).replace(',', '.')))
+                    orp_norm = str(float(str(orp).replace(',', '.')))
+                    fac_norm = str(float(str(fac).replace(',', '.')))
                     
                     data_row = [
                         fecha.strftime('%Y-%m-%d'),
