@@ -535,7 +535,52 @@ def main():
         
         # Analizar alertas
         alerts = analyze_alerts(df, mant_sheet)
-        
+
+        # DEBUG TEMPORAL - Ver datos de mantenimiento
+        st.markdown("### 🔍 DEBUG - Datos de Mantenimiento")
+        try:
+            maint_df = get_maintenance_data(mant_sheet)
+            if not maint_df.empty:
+                st.write("📋 Todos los mantenimientos:")
+                st.dataframe(maint_df)
+                
+                if 'Proximo_Mantenimiento' in maint_df.columns:
+                    now = pd.Timestamp.now()
+                    st.write(f"⏰ Fecha actual: {now}")
+                    
+                    # Mostrar mantenimientos vencidos
+                    vencidos = maint_df[
+                        (maint_df['Proximo_Mantenimiento'].notna()) & 
+                        (maint_df['Proximo_Mantenimiento'] <= now)
+                    ]
+                    
+                    if not vencidos.empty:
+                        st.write("⚠️ Mantenimientos con fecha vencida:")
+                        st.dataframe(vencidos[['Fecha', 'Tipo', 'Proximo_Mantenimiento']])
+                        
+                        # Verificar cada uno
+                        for _, task in vencidos.iterrows():
+                            st.write(f"🔍 Verificando: {task['Tipo']} (vencido: {task['Proximo_Mantenimiento']})")
+                            
+                            same_type_after = maint_df[
+                                (maint_df['Tipo'] == task['Tipo']) & 
+                                (maint_df['Fecha'] > task['Proximo_Mantenimiento'])
+                            ]
+                            
+                            if same_type_after.empty:
+                                st.write(f"❌ No hay {task['Tipo']} posterior a {task['Proximo_Mantenimiento']}")
+                            else:
+                                st.write(f"✅ Hay {task['Tipo']} posterior:")
+                                st.dataframe(same_type_after[['Fecha', 'Tipo']])
+                    else:
+                        st.write("✅ No hay mantenimientos vencidos")
+            else:
+                st.write("📋 No hay datos de mantenimiento")
+        except Exception as e:
+            st.write(f"❌ Error en debug: {e}")
+
+        st.markdown("---")
+
         # Datos más recientes
         latest_data = df.iloc[-1]
         
