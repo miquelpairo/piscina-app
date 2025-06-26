@@ -528,8 +528,7 @@ def main():
         # Analizar alertas
         alerts = analyze_alerts(df, mant_sheet)
         
-        # Datos más recientes
-        latest_data = df.iloc[-1]
+
         
         st.markdown("### 📊 Estado Actual de la Piscina")
         
