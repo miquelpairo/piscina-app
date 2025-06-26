@@ -582,25 +582,31 @@ def main():
         # Próximos mantenimientos en el dashboard
         st.markdown("### 📅 Próximos Mantenimientos")
 
+        # COPIAR EXACTAMENTE EL CÓDIGO QUE FUNCIONA EN MANTENIMIENTO
         try:
             maint_df = get_maintenance_data(mant_sheet)
-            if not maint_df.empty and 'Proximo_Mantenimiento' in mant_df.columns:
-                # USAR LA MISMA LÓGICA QUE EN MANTENIMIENTO
+            if not maint_df.empty and 'Proximo_Mantenimiento' in maint_df.columns:
+                # Filtrar solo mantenimientos futuros con fechas válidas
                 future_maint = maint_df[
                     (maint_df['Proximo_Mantenimiento'].notna()) & 
-                    (maint_df['Proximo_Mantenimiento'] > pd.Timestamp.now())
+                    (mant_df['Proximo_Mantenimiento'] > pd.Timestamp.now())
                 ].copy()
                 
                 if not future_maint.empty:
-                    # Obtener los 3 próximos (en lugar de agrupar por tipo)
+                    # Obtener los 3 próximos mantenimientos (sin agrupar por tipo)
                     next_maint = future_maint.nsmallest(3, 'Proximo_Mantenimiento')
                     
-                    cols = st.columns(3)
-                    for i, (_, maint) in enumerate(next_maint.iterrows()):
-                        with cols[i]:
+                    # Mostrar en tarjetas
+                    if len(next_maint) <= 3:
+                        cols = st.columns(len(next_maint))
+                    else:
+                        cols = st.columns(3)
+                    
+                    for i, (_, maint) in enumerate(next_mant.iterrows()):
+                        with cols[i % 3]:
                             days_until = (maint['Proximo_Mantenimiento'].date() - pd.Timestamp.now().date()).days
                             
-                            # Color según proximidad (MISMA LÓGICA)
+                            # Color según proximidad
                             if days_until <= 2:
                                 color = "#ff6b6b"  # Rojo - Muy próximo
                                 icon = "🔴"
@@ -632,7 +638,9 @@ def main():
             else:
                 st.info("📅 No hay datos de mantenimiento programado.")
         except Exception as e:
-            st.warning("⚠️ Error cargando próximos mantenimientos.")
+            st.error(f"Error mostrando próximos mantenimientos: {e}")
+            # DEBUG: mostrar el error específico
+            st.write(f"Error específico: {str(e)}")
  
     elif tab == "📝 Nueva Medición":
         st.markdown("### 📝 Registrar Nueva Medición")
