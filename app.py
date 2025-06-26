@@ -380,14 +380,10 @@ def analyze_alerts(df, mant_sheet=None):
                 })
     
     # 4. Mantenimiento vencido (si se proporciona mant_sheet)
-    # 4. Mantenimiento vencido (si se proporciona mant_sheet)
     if mant_sheet:
         try:
             maint_df = get_maintenance_data(mant_sheet)
             if not maint_df.empty and 'Proximo_Mantenimiento' in maint_df.columns:
-                # DEBUG: Mostrar datos de mantenimiento
-                st.write("🔍 DEBUG - Datos de mantenimiento:")
-                st.dataframe(maint_df[['Fecha', 'Tipo', 'Proximo_Mantenimiento']])
                 
                 # Filtrar mantenimientos vencidos
                 overdue_tasks = []
@@ -402,15 +398,12 @@ def analyze_alerts(df, mant_sheet=None):
                             (maint_df['Fecha'] > task['Proximo_Mantenimiento'])
                         ]
                         
-                        st.write(f"🔍 DEBUG - Mantenimientos del mismo tipo ({task['Tipo']}) posteriores a {task['Proximo_Mantenimiento']}:")
                         st.dataframe(same_type_after)
                         
                         # Si no hay mantenimiento del mismo tipo posterior, sigue vencido
                         if same_type_after.empty:
-                            st.write(f"⚠️ DEBUG - No hay mantenimiento posterior, sigue vencido: {task['Tipo']}")
                             overdue_tasks.append(task)
                         else:
-                            st.write(f"✅ DEBUG - Ya se hizo mantenimiento posterior, no vencido: {task['Tipo']}")
                                         
                 if overdue_tasks:
                     alerts.append({
