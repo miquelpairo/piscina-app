@@ -111,8 +111,18 @@ def get_data_from_sheets(sheet):
         data = sheet.get_all_records()
         if data:
             df = pd.DataFrame(data)
+            
+            # Convertir fecha y hora
             df['Dia'] = pd.to_datetime(df['Dia'])
             df['Hora'] = pd.to_datetime(df['Hora'], format='%H:%M').dt.time
+            
+            # Convertir columnas numéricas, reemplazando comas por puntos
+            numeric_columns = ['pH', 'Conductividad', 'TDS', 'Sal', 'ORP', 'FAC']
+            for col in numeric_columns:
+                if col in df.columns:
+                    # Convertir a string, reemplazar coma por punto, luego a float
+                    df[col] = df[col].astype(str).str.replace(',', '.').astype(float)
+            
             return df
         else:
             return pd.DataFrame()
@@ -123,26 +133,10 @@ def get_data_from_sheets(sheet):
 def add_data_to_sheets(sheet, data):
     """Añade una nueva fila de datos a Google Sheets"""
     try:
-        # Convertir datos numéricos a float para evitar problemas de formato regional
-        processed_data = []
-        for i, value in enumerate(data):
-            if i >= 2:  # Los índices 2 en adelante son números (pH, conductividad, etc.)
-                # Asegurarse de que es un número float
-                if isinstance(value, str):
-                    value = value.replace(',', '.')
-                processed_data.append(float(value))
-            else:
-                # Fecha y hora como string
-                processed_data.append(str(value))
-        
-        # Debug temporal
-        st.write("🔍 Datos procesados para Google Sheets:", processed_data)
-        
-        sheet.append_row(processed_data)
+        sheet.append_row(data)
         return True
     except Exception as e:
         st.error(f"Error guardando datos: {e}")
-        st.write("Datos que causaron error:", data)
         return False
 
 # Rangos óptimos para piscina de sal
@@ -423,11 +417,19 @@ def main():
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             if st.button("💾 Guardar Medición", type="primary", use_container_width=True):
+                # Normalizar decimales (convertir comas en puntos)
                 try:
+                    ph_norm = str(float(str(ph).replace(',', '.')))
+                    conductividad_norm = str(float(str(conductividad).replace(',', '.')))
+                    tds_norm = str(float(str(tds).replace(',', '.')))
+                    sal_norm = str(float(str(sal).replace(',', '.')))
+                    orp_norm = str(float(str(orp).replace(',', '.')))
+                    fac_norm = str(float(str(fac).replace(',', '.')))
+                    
                     data_row = [
                         fecha.strftime('%Y-%m-%d'),
                         hora.strftime('%H:%M'),
-                        ph, conductividad, tds, sal, orp, fac  # Enviar valores originales
+                        ph_norm, conductividad_norm, tds_norm, sal_norm, orp_norm, fac_norm
                     ]
                     
                     if add_data_to_sheets(sheet, data_row):
@@ -435,8 +437,8 @@ def main():
                         st.balloons()
                     else:
                         st.error("❌ Error al guardar la medición")
-                except Exception as e:
-                    st.error(f"⚠️ Error: {e}")
+                except ValueError:
+                    st.error("⚠️ Error en formato de números. Verifica los valores introducidos.")
     
     elif tab == "📈 Gráficos":
         st.markdown("### 📈 Análisis de Tendencias")
