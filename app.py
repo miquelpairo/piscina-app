@@ -394,10 +394,8 @@ def analyze_alerts(df, mant_sheet=None):
                         # Verificar si ya se hizo mantenimiento del mismo tipo después de la fecha programada
                         same_type_after = maint_df[
                             (maint_df['Tipo'] == task['Tipo']) & 
-                            (maint_df['Fecha'] > task['Proximo_Mantenimiento'])
+                            (maint_df['Fecha'] >= task['Proximo_Mantenimiento'])
                         ]
-                        
-                        st.dataframe(same_type_after)
                         
                         # Si no hay mantenimiento del mismo tipo posterior, sigue vencido
                         if same_type_after.empty:
