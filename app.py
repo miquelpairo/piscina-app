@@ -300,7 +300,7 @@ def main():
         st.markdown("### 🎛️ Panel de Control")
         tab = st.radio("Navegación:", 
                       ["🏠 Dashboard", "📝 Nueva Medición", "📈 Gráficos", 
-                       "📋 Historial", "ℹ️ Rangos Óptimos"],
+                       "📋 Historial", "🔧 Mantenimiento", "ℹ️ Rangos Óptimos"],
                       index=0)
         
 
