@@ -753,27 +753,44 @@ def main():
         
         else:  # Historial Mantenimiento
             st.markdown("#### 📋 Historial de Mantenimiento")
+            
             # Obtener datos reales de mantenimiento
             df_mant = get_maintenance_data(mant_sheet)
-
+            
+            # PRIMERO definir los filtros
+            st.markdown("##### 🔍 Filtros")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                filtro_tipo = st.multiselect("Tipo:", ["Limpieza filtro bolas", "Cambio filtro bolas", "Aspirado fondo", "Calibración sondas", "Limpieza skimmers", "Limpieza paredes", "Revisión célula sal"])
+            with col2:
+                desde = st.date_input("Desde:", value=date.today() - pd.Timedelta(days=30), key="mant_desde")
+            with col3:
+                hasta = st.date_input("Hasta:", value=date.today(), key="mant_hasta")
+            
+            # DESPUÉS usar los filtros
             if not df_mant.empty:
-                # Filtrar datos
-                if filtro_tipo:
-                    df_mant = df_mant[df_mant['Tipo'].isin(filtro_tipo)]
+                # Aplicar filtros
+                df_mant_filtered = df_mant.copy()
                 
-                mask = (df_mant['Fecha'] >= pd.Timestamp(desde)) & (df_mant['Fecha'] <= pd.Timestamp(hasta))
-                df_mant_filtered = df_mant[mask]
+                if filtro_tipo:  # Ahora sí está definido
+                    df_mant_filtered = df_mant_filtered[df_mant_filtered['Tipo'].isin(filtro_tipo)]
                 
-                # Formatear para mostrar
-                df_display = df_mant_filtered.copy()
-                df_display['Fecha'] = df_display['Fecha'].dt.strftime('%d/%m/%Y')
-                if 'Proximo_Mantenimiento' in df_display.columns:
-                    df_display['Proximo_Mantenimiento'] = df_display['Proximo_Mantenimiento'].dt.strftime('%d/%m/%Y')
+                # Filtro por fechas
+                mask = (df_mant_filtered['Fecha'] >= pd.Timestamp(desde)) & (df_mant_filtered['Fecha'] <= pd.Timestamp(hasta))
+                df_mant_filtered = df_mant_filtered[mask]
                 
-                st.dataframe(df_display, use_container_width=True)
+                if not df_mant_filtered.empty:
+                    # Formatear para mostrar
+                    df_display = df_mant_filtered.copy()
+                    df_display['Fecha'] = df_display['Fecha'].dt.strftime('%d/%m/%Y')
+                    if 'Proximo_Mantenimiento' in df_display.columns:
+                        df_display['Proximo_Mantenimiento'] = df_display['Proximo_Mantenimiento'].dt.strftime('%d/%m/%Y')
+                    
+                    st.dataframe(df_display, use_container_width=True)
+                else:
+                    st.info("📊 No hay registros que coincidan con los filtros.")
             else:
                 st.info("📊 No hay registros de mantenimiento aún.")
-
             
             # Mockup de cómo se vería
             st.markdown("##### 🔍 Filtros")
