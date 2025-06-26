@@ -80,6 +80,7 @@ st.markdown("""
 
 # Configuración de Google Sheets
 @st.cache_resource
+@st.cache_resource
 def init_google_sheets():
     """Inicializa la conexión con Google Sheets"""
     try:
@@ -99,11 +100,24 @@ def init_google_sheets():
         
         credentials = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         gc = gspread.authorize(credentials)
-        sheet = gc.open(st.secrets["sheet_name"]).sheet1
-        return sheet
+        
+        # Abrir el archivo y devolver ambas hojas
+        spreadsheet = gc.open(st.secrets["sheet_name"])
+        mediciones_sheet = spreadsheet.sheet1  # Hoja original
+        
+        try:
+            mantenimiento_sheet = spreadsheet.worksheet("Mantenimiento")
+        except:
+            # Si no existe, crearla
+            mantenimiento_sheet = spreadsheet.add_worksheet(title="Mantenimiento", rows="1000", cols="6")
+            # Añadir encabezados
+            mantenimiento_sheet.append_row(["Fecha", "Tipo", "Estado_Antes", "Tiempo_Minutos", "Notas", "Proximo_Mantenimiento"])
+        
+        return mediciones_sheet, mantenimiento_sheet
+        
     except Exception as e:
         st.error(f"Error conectando con Google Sheets: {e}")
-        return None
+        return None, None
 
 def get_data_from_sheets(sheet):
     """Obtiene los datos de Google Sheets"""
@@ -138,6 +152,32 @@ def add_data_to_sheets(sheet, data):
     except Exception as e:
         st.error(f"Error guardando datos: {e}")
         return False
+
+def get_maintenance_data(mant_sheet):
+    """Obtiene los datos de mantenimiento de Google Sheets"""
+    try:
+        data = mant_sheet.get_all_records()
+        if data:
+            df = pd.DataFrame(data)
+            df['Fecha'] = pd.to_datetime(df['Fecha'])
+            if 'Proximo_Mantenimiento' in df.columns and len(df) > 0:
+                df['Proximo_Mantenimiento'] = pd.to_datetime(df['Proximo_Mantenimiento'], errors='coerce')
+            return df
+        else:
+            return pd.DataFrame()
+    except Exception as e:
+        st.error(f"Error obteniendo datos de mantenimiento: {e}")
+        return pd.DataFrame()
+
+def add_maintenance_to_sheets(mant_sheet, data):
+    """Añade una nueva fila de mantenimiento a Google Sheets"""
+    try:
+        mant_sheet.append_row(data)
+        return True
+    except Exception as e:
+        st.error(f"Error guardando mantenimiento: {e}")
+        return False
+
 
 # Rangos óptimos para piscina de sal
 RANGES = {
@@ -289,9 +329,9 @@ def main():
                 unsafe_allow_html=True)
     
     # Inicializar Google Sheets
-    sheet = init_google_sheets()
-    
-    if sheet is None:
+    sheet, mant_sheet = init_google_sheets()
+
+    if sheet is None or mant_sheet is None:
         st.error("⚠️ No se pudo conectar con Google Sheets. Verifica la configuración.")
         return
     
@@ -692,8 +732,12 @@ def main():
                             fecha_siguiente.strftime('%Y-%m-%d') if programar_siguiente else ""
                         ]
                         
-                        # Por ahora, mostrar los datos (luego configuraremos Google Sheets)
-                        st.success("✅ Registro guardado!")
+                        # Guardar en Google Sheets
+                        if add_maintenance_to_sheets(mant_sheet, mant_data):
+                            st.success("✅ Registro guardado en Google Sheets!")
+                        else:
+                            st.error("❌ Error al guardar en Google Sheets")
+
                         st.json({
                             "Fecha": fecha_mant.strftime('%d/%m/%Y'),
                             "Tipo": tipo_final,
@@ -709,7 +753,27 @@ def main():
         
         else:  # Historial Mantenimiento
             st.markdown("#### 📋 Historial de Mantenimiento")
-            st.info("📊 Historial de mantenimiento - Por implementar conexión con Google Sheets")
+            # Obtener datos reales de mantenimiento
+            df_mant = get_maintenance_data(mant_sheet)
+
+            if not df_mant.empty:
+                # Filtrar datos
+                if filtro_tipo:
+                    df_mant = df_mant[df_mant['Tipo'].isin(filtro_tipo)]
+                
+                mask = (df_mant['Fecha'] >= pd.Timestamp(desde)) & (df_mant['Fecha'] <= pd.Timestamp(hasta))
+                df_mant_filtered = df_mant[mask]
+                
+                # Formatear para mostrar
+                df_display = df_mant_filtered.copy()
+                df_display['Fecha'] = df_display['Fecha'].dt.strftime('%d/%m/%Y')
+                if 'Proximo_Mantenimiento' in df_display.columns:
+                    df_display['Proximo_Mantenimiento'] = df_display['Proximo_Mantenimiento'].dt.strftime('%d/%m/%Y')
+                
+                st.dataframe(df_display, use_container_width=True)
+            else:
+                st.info("📊 No hay registros de mantenimiento aún.")
+
             
             # Mockup de cómo se vería
             st.markdown("##### 🔍 Filtros")
