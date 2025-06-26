@@ -154,15 +154,24 @@ def check_parameter_status(value, param):
     if param not in RANGES:
         return "unknown"
     
-    min_val = RANGES[param]['min']
-    max_val = RANGES[param]['max']
-    
-    if min_val <= value <= max_val:
-        return "optimal"
-    elif value < min_val:
-        return "low"
-    else:
-        return "high"
+    try:
+        # Asegurar que value es un número
+        if isinstance(value, str):
+            value = float(value.replace(',', '.'))
+        else:
+            value = float(value)
+        
+        min_val = RANGES[param]['min']
+        max_val = RANGES[param]['max']
+        
+        if min_val <= value <= max_val:
+            return "optimal"
+        elif value < min_val:
+            return "low"
+        else:
+            return "high"
+    except (ValueError, TypeError):
+        return "unknown"
 
 def get_status_info(status):
     """Devuelve información del estado del parámetro"""
