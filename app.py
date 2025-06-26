@@ -304,9 +304,9 @@ def get_chart_range(param):
     """Define rangos personalizados para cada parámetro en los gráficos"""
     ranges = {
         'pH': [6, 8.5],
-        'Sal': [2000, 4000],
-        'Conductividad': [2000, 7000],
-        'TDS': [1000, 3500],
+        'Sal': [2000, 5000],
+        'Conductividad': [2000, 9000],
+        'TDS': [1000, 5000],
         'ORP': [200, 800],
         'FAC': [0, 3]
     }
@@ -710,8 +710,8 @@ def main():
             visualization_ranges = {
                 'pH': {'min': 6.5, 'max': 8.0},           # Óptimo: 7.2-7.6
                 'Sal': {'min': 2000, 'max': 5000},        # Óptimo: 2700-4500  
-                'Conductividad': {'min': 2000, 'max': 7000}, # Óptimo: 3000-6000
-                'TDS': {'min': 1000, 'max': 3500},        # Óptimo: 1500-3000
+                'Conductividad': {'min': 3000, 'max': 7000}, # Óptimo: 3000-6000
+                'TDS': {'min': 1500, 'max': 5000},        # Óptimo: 1500-3000
                 'ORP': {'min': 500, 'max': 900},          # Óptimo: 650-750 (mucho más margen)
                 'FAC': {'min': 0, 'max': 5}              # Óptimo: 1.0-3.0
             }
