@@ -285,7 +285,7 @@ def normalize_decimal(value):
 
 def main():
     # Título principal mejorado
-    st.markdown('<h1 class="main-title">🏊‍♂️ Control Avanzado de Piscina de Sal</h1>', 
+    st.markdown('<h1 class="main-title">🏊‍♂️ Control de Piscina</h1>', 
                 unsafe_allow_html=True)
     
     # Inicializar Google Sheets
