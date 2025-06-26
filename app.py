@@ -385,21 +385,33 @@ def analyze_alerts(df, mant_sheet=None):
         try:
             maint_df = get_maintenance_data(mant_sheet)
             if not maint_df.empty and 'Proximo_Mantenimiento' in maint_df.columns:
+                # DEBUG: Mostrar datos de mantenimiento
+                st.write("🔍 DEBUG - Datos de mantenimiento:")
+                st.dataframe(maint_df[['Fecha', 'Tipo', 'Proximo_Mantenimiento']])
+                
                 # Filtrar mantenimientos vencidos
                 overdue_tasks = []
                 
                 for _, task in maint_df.iterrows():
                     if pd.notna(task['Proximo_Mantenimiento']) and task['Proximo_Mantenimiento'] <= pd.Timestamp.now():
+                        st.write(f"🔍 DEBUG - Tarea vencida encontrada: {task['Tipo']} programada para {task['Proximo_Mantenimiento']}")
+                        
                         # Verificar si ya se hizo mantenimiento del mismo tipo después de la fecha programada
                         same_type_after = maint_df[
                             (maint_df['Tipo'] == task['Tipo']) & 
                             (maint_df['Fecha'] > task['Proximo_Mantenimiento'])
                         ]
                         
+                        st.write(f"🔍 DEBUG - Mantenimientos del mismo tipo ({task['Tipo']}) posteriores a {task['Proximo_Mantenimiento']}:")
+                        st.dataframe(same_type_after)
+                        
                         # Si no hay mantenimiento del mismo tipo posterior, sigue vencido
                         if same_type_after.empty:
+                            st.write(f"⚠️ DEBUG - No hay mantenimiento posterior, sigue vencido: {task['Tipo']}")
                             overdue_tasks.append(task)
-                
+                        else:
+                            st.write(f"✅ DEBUG - Ya se hizo mantenimiento posterior, no vencido: {task['Tipo']}")
+                                        
                 if overdue_tasks:
                     alerts.append({
                         'type': 'maintenance',
