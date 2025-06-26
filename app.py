@@ -80,7 +80,6 @@ st.markdown("""
 
 # Configuración de Google Sheets
 @st.cache_resource
-@st.cache_resource
 def init_google_sheets():
     """Inicializa la conexión con Google Sheets"""
     try:
