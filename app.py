@@ -581,18 +581,18 @@ def main():
             
         # Próximos mantenimientos en el dashboard
         st.markdown("### 📅 Próximos Mantenimientos")
-        
+
         try:
             maint_df = get_maintenance_data(mant_sheet)
-            if not maint_df.empty and 'Proximo_Mantenimiento' in maint_df.columns:
-                # Filtrar solo mantenimientos futuros
+            if not maint_df.empty and 'Proximo_Mantenimiento' in mant_df.columns:
+                # USAR LA MISMA LÓGICA QUE EN MANTENIMIENTO
                 future_maint = maint_df[
-                    (mant_df['Proximo_Mantenimiento'].notna()) & 
-                    (mant_df['Proximo_Mantenimiento'] > pd.Timestamp.now())
+                    (maint_df['Proximo_Mantenimiento'].notna()) & 
+                    (maint_df['Proximo_Mantenimiento'] > pd.Timestamp.now())
                 ].copy()
                 
                 if not future_maint.empty:
-                    # Obtener los 3 próximos mantenimientos (sin agrupar por tipo)
+                    # Obtener los 3 próximos (en lugar de agrupar por tipo)
                     next_maint = future_maint.nsmallest(3, 'Proximo_Mantenimiento')
                     
                     cols = st.columns(3)
@@ -600,46 +600,40 @@ def main():
                         with cols[i]:
                             days_until = (maint['Proximo_Mantenimiento'].date() - pd.Timestamp.now().date()).days
                             
-                            # Color según proximidad
+                            # Color según proximidad (MISMA LÓGICA)
                             if days_until <= 2:
-                                color = "#ff6b6b"  # Rojo
+                                color = "#ff6b6b"  # Rojo - Muy próximo
                                 icon = "🔴"
-                                urgency = "¡Urgente!"
                             elif days_until <= 7:
-                                color = "#ffa726"  # Naranja
+                                color = "#ffa726"  # Naranja - Próximo
                                 icon = "🟠"
-                                urgency = "Próximo"
                             else:
-                                color = "#4caf50"  # Verde
+                                color = "#4caf50"  # Verde - Lejano
                                 icon = "🟢"
-                                urgency = "Programado"
                             
                             st.markdown(f"""
-                            <div style="background: rgba(255, 255, 255, 0.95); border-radius: 12px; 
-                                       padding: 15px; margin: 8px 0; text-align: center;
-                                       border-left: 4px solid {color}; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                                <div style="font-size: 1.5rem; margin-bottom: 8px;">{icon}</div>
-                                <div style="font-weight: bold; color: #333; font-size: 0.9rem; margin-bottom: 5px;">
+                            <div style="background: rgba(255, 255, 255, 0.9); border-radius: 10px; 
+                                       padding: 15px; margin: 5px; text-align: center;
+                                       border-left: 4px solid {color};">
+                                <div style="font-size: 1.2rem;">{icon}</div>
+                                <div style="font-weight: bold; color: #333; margin: 5px 0;">
                                     {maint['Tipo']}
                                 </div>
-                                <div style="color: {color}; font-weight: bold; font-size: 0.95rem;">
+                                <div style="color: {color}; font-weight: bold;">
                                     {maint['Proximo_Mantenimiento'].strftime('%d/%m/%Y')}
                                 </div>
-                                <div style="color: #666; font-size: 0.85rem; margin-top: 3px;">
+                                <div style="color: #666; font-size: 0.9rem;">
                                     {days_until} día{'s' if days_until != 1 else ''}
-                                </div>
-                                <div style="color: {color}; font-size: 0.8rem; font-weight: 600; margin-top: 2px;">
-                                    {urgency}
                                 </div>
                             </div>
                             """, unsafe_allow_html=True)
                 else:
                     st.info("📅 No hay mantenimientos programados próximamente.")
             else:
-                st.info("📅 Sin datos de mantenimiento programado.")
+                st.info("📅 No hay datos de mantenimiento programado.")
         except Exception as e:
             st.warning("⚠️ Error cargando próximos mantenimientos.")
-    
+ 
     elif tab == "📝 Nueva Medición":
         st.markdown("### 📝 Registrar Nueva Medición")
         
