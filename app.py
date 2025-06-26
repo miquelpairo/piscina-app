@@ -240,12 +240,7 @@ def create_enhanced_chart(df, param_seleccionado):
     )
     
     return fig
-    
-def normalize_decimal(value):
-    """Convierte comas decimales en puntos para compatibilidad móvil"""
-    if isinstance(value, str):
-        return float(value.replace(',', '.'))
-    return float(value)
+
 
 def get_chart_range(param):
     """Define rangos personalizados para cada parámetro en los gráficos"""
@@ -261,9 +256,15 @@ def get_chart_range(param):
 
 def normalize_decimal(value):
     """Convierte comas decimales en puntos para compatibilidad móvil"""
-    if isinstance(value, str):
-        return float(value.replace(',', '.'))
-    return float(value)
+    try:
+        if isinstance(value, str):
+            # Reemplazar coma por punto
+            value_str = str(value).replace(',', '.')
+            return float(value_str)
+        return float(value)
+    except (ValueError, TypeError):
+        # Si no se puede convertir, devolver 0
+        return 0.0
 
 def main():
     # Título principal mejorado
@@ -368,7 +369,20 @@ def main():
         
         # Vista previa del estado
         st.markdown("### 🚦 Vista Previa del Estado")
-        params = {'pH': ph, 'Conductividad': conductividad, 'TDS': tds, 'Sal': sal, 'ORP': orp, 'FAC': fac}
+        
+        # Normalizar para vista previa
+        try:
+            params = {
+                'pH': normalize_decimal(ph), 
+                'Conductividad': normalize_decimal(conductividad), 
+                'TDS': normalize_decimal(tds), 
+                'Sal': normalize_decimal(sal), 
+                'ORP': normalize_decimal(orp), 
+                'FAC': normalize_decimal(fac)
+            }
+        except ValueError:
+            st.error("⚠️ Error en formato de números. Verifica que uses punto (.) como separador decimal.")
+            params = {'pH': 0, 'Conductividad': 0, 'TDS': 0, 'Sal': 0, 'ORP': 0, 'FAC': 0}
         
         cols = st.columns(3)
         for i, (param, value) in enumerate(params.items()):
