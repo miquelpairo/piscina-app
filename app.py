@@ -404,7 +404,7 @@ def analyze_alerts(df, mant_sheet=None):
                         if same_type_after.empty:
                             overdue_tasks.append(task)
                         else:
-                                        
+                             pass           
                 if overdue_tasks:
                     alerts.append({
                         'type': 'maintenance',
