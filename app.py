@@ -1055,7 +1055,7 @@ def main():
         
         with tips_tabs[3]:
             st.markdown("""
-            **Conductividad (3000 - 6000 µS/cm) - Medida indirecta de sal** ⚡
+            **Conductividad (3000 - 8000 µS/cm) - Medida indirecta de sal** ⚡
             
             - **Relación**: Directamente proporcional al contenido de sal
             - **Uso**: Verificar mediciones de salinidad
@@ -1065,7 +1065,7 @@ def main():
         
         with tips_tabs[4]:
             st.markdown("""
-            **TDS (1500 - 3000 ppm) - Sólidos disueltos totales** 💧
+            **TDS (1500 - 4500 ppm) - Sólidos disueltos totales** 💧
             
             - **Incluye**: Sal + otros minerales disueltos
             - **Indicador**: Calidad general del agua
