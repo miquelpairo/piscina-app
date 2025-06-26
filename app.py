@@ -612,7 +612,127 @@ def main():
                     mime="text/csv",
                     use_container_width=True
                 )
-    
+  
+    elif tab == "🔧 Mantenimiento":
+        st.markdown("### 🔧 Registro de Mantenimiento")
+        
+        # Subtabs para organizar
+        mant_tab = st.radio("", ["📝 Nuevo Registro", "📋 Historial Mantenimiento"], horizontal=True)
+        
+        if mant_tab == "📝 Nuevo Registro":
+            st.markdown("#### Registrar Nueva Tarea de Mantenimiento")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                fecha_mant = st.date_input("📅 Fecha", value=date.today(), key="mant_fecha")
+                tipo_mant = st.selectbox("🔧 Tipo de Mantenimiento", [
+                    "Limpieza filtro bolas",
+                    "Cambio filtro bolas", 
+                    "Limpieza skimmers",
+                    "Aspirado fondo",
+                    "Limpieza paredes",
+                    "Calibración sondas",
+                    "Revisión célula sal",
+                    "Limpieza bomba",
+                    "Cambio arena filtro",
+                    "Mantenimiento general",
+                    "Otro"
+                ])
+                
+            with col2:
+                if tipo_mant == "Otro":
+                    tipo_personalizado = st.text_input("Especificar tipo:")
+                    tipo_final = tipo_personalizado if tipo_personalizado else "Otro"
+                else:
+                    tipo_final = tipo_mant
+                    
+                estado_antes = st.selectbox("Estado antes", ["Bueno", "Regular", "Malo", "Crítico"])
+                tiempo_empleado = st.number_input("⏱️ Tiempo empleado (minutos)", min_value=0, value=30, step=5)
+            
+            # Notas y observaciones
+            notas = st.text_area("📝 Notas y observaciones", 
+                                placeholder="Ej: Filtro muy sucio, cambié 3 bolas rotas, revisé presión bomba...")
+            
+            # Próximo mantenimiento
+            st.markdown("#### 📅 Programar Próximo Mantenimiento")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                programar_siguiente = st.checkbox("Programar recordatorio")
+                
+            with col2:
+                if programar_siguiente:
+                    # Sugerencias automáticas según tipo
+                    sugerencias_dias = {
+                        "Limpieza filtro bolas": 7,
+                        "Cambio filtro bolas": 30,
+                        "Limpieza skimmers": 3,
+                        "Aspirado fondo": 7,
+                        "Calibración sondas": 15,
+                        "Revisión célula sal": 30
+                    }
+                    dias_sugeridos = sugerencias_dias.get(tipo_final, 14)
+                    fecha_siguiente = st.date_input("Próximo mantenimiento", 
+                                                  value=fecha_mant + pd.Timedelta(days=dias_sugeridos))
+            
+            # Botón guardar
+            st.markdown("---")
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col2:
+                if st.button("💾 Guardar Registro de Mantenimiento", type="primary", use_container_width=True):
+                    try:
+                        # Preparar datos para Google Sheets (nueva hoja o columnas adicionales)
+                        mant_data = [
+                            fecha_mant.strftime('%Y-%m-%d'),
+                            tipo_final,
+                            estado_antes,
+                            tiempo_empleado,
+                            notas,
+                            fecha_siguiente.strftime('%Y-%m-%d') if programar_siguiente else ""
+                        ]
+                        
+                        # Por ahora, mostrar los datos (luego configuraremos Google Sheets)
+                        st.success("✅ Registro guardado!")
+                        st.json({
+                            "Fecha": fecha_mant.strftime('%d/%m/%Y'),
+                            "Tipo": tipo_final,
+                            "Estado previo": estado_antes,
+                            "Tiempo": f"{tiempo_empleado} min",
+                            "Notas": notas,
+                            "Próximo": fecha_siguiente.strftime('%d/%m/%Y') if programar_siguiente else "No programado"
+                        })
+                        st.balloons()
+                        
+                    except Exception as e:
+                        st.error(f"❌ Error al guardar: {e}")
+        
+        else:  # Historial Mantenimiento
+            st.markdown("#### 📋 Historial de Mantenimiento")
+            st.info("📊 Historial de mantenimiento - Por implementar conexión con Google Sheets")
+            
+            # Mockup de cómo se vería
+            st.markdown("##### 🔍 Filtros")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                filtro_tipo = st.multiselect("Tipo:", ["Limpieza filtro bolas", "Aspirado fondo", "Calibración sondas"])
+            with col2:
+                desde = st.date_input("Desde:", value=date.today() - pd.Timedelta(days=30))
+            with col3:
+                hasta = st.date_input("Hasta:", value=date.today())
+                
+            # Ejemplo de datos
+            ejemplo_data = {
+                "Fecha": ["2024-12-20", "2024-12-15", "2024-12-10"],
+                "Tipo": ["Limpieza filtro bolas", "Aspirado fondo", "Calibración sondas"],
+                "Tiempo": ["45 min", "30 min", "15 min"],
+                "Estado previo": ["Regular", "Malo", "Bueno"],
+                "Próximo": ["2024-12-27", "2024-12-22", "2024-12-25"]
+            }
+            
+            st.dataframe(pd.DataFrame(ejemplo_data), use_container_width=True)
+
+  
     elif tab == "ℹ️ Rangos Óptimos":
         st.markdown("### 📚 Guía Completa de Parámetros")
         
