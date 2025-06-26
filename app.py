@@ -390,7 +390,6 @@ def analyze_alerts(df, mant_sheet=None):
                 
                 for _, task in maint_df.iterrows():
                     if pd.notna(task['Proximo_Mantenimiento']) and task['Proximo_Mantenimiento'] <= pd.Timestamp.now():
-                        st.write(f"🔍 DEBUG - Tarea vencida encontrada: {task['Tipo']} programada para {task['Proximo_Mantenimiento']}")
                         
                         # Verificar si ya se hizo mantenimiento del mismo tipo después de la fecha programada
                         same_type_after = maint_df[
