@@ -781,7 +781,7 @@ def main():
                 'Conductividad': {'min': 3000, 'max': 7000}, # Óptimo: 3000-6000
                 'TDS': {'min': 1500, 'max': 5000},        # Óptimo: 1500-3000
                 'ORP': {'min': 500, 'max': 900},          # Óptimo: 650-750 (mucho más margen)
-                'FAC': {'min': 0, 'max': 5}              # Óptimo: 1.0-3.0
+                'FAC': {'min': 0, 'max': 5},              # Óptimo: 1.0-3.0
                 'Temperatura': {'min': 20, 'max': 35}
             }
 
