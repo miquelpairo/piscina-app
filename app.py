@@ -676,7 +676,7 @@ def main():
                 'TDS': normalize_decimal(tds), 
                 'Sal': normalize_decimal(sal), 
                 'ORP': normalize_decimal(orp), 
-                'FAC': normalize_decimal(fac)
+                'FAC': normalize_decimal(fac),
                 'Temperatura': normalize_decimal(temperatura)
             }
         except ValueError:
