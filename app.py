@@ -1070,7 +1070,7 @@ def main():
             st.markdown("##### 🔍 Filtros")
             col1, col2, col3 = st.columns(3)
             with col1:
-                filtro_tipo = st.multiselect("Tipo:", ["Limpieza filtro bolas", "Cambio filtro bolas", "Aspirado fondo", "Calibración sondas", "Limpieza skimmers", "Limpieza paredes", "Revisión célula sal"])
+                filtro_tipo = st.multiselect("Tipo:", ["Limpieza filtro", "Adición de químicos", "Cambio filtro", "Aspirado fondo", "Calibración sondas", "Limpieza skimmers", "Limpieza paredes", "Revisión célula sal"])
             with col2:
                 desde = st.date_input("Desde:", value=date.today() - pd.Timedelta(days=30), key="mant_desde")
             with col3:
