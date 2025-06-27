@@ -130,7 +130,7 @@ def get_data_from_sheets(sheet):
             df['Hora'] = pd.to_datetime(df['Hora'], format='%H:%M').dt.time
             
             # Convertir columnas numéricas, reemplazando comas por puntos
-            numeric_columns = ['pH', 'Conductividad', 'TDS', 'Sal', 'ORP', 'FAC']
+            numeric_columns = ['pH', 'Conductividad', 'TDS', 'Sal', 'ORP', 'FAC','Temperatura']
             for col in numeric_columns:
                 if col in df.columns:
                     # Convertir a string, reemplazar coma por punto, luego a float
@@ -186,6 +186,7 @@ RANGES = {
     'Sal': {'min': 2700, 'max': 4500, 'unit': 'ppm', 'icon': '🧂'},
     'ORP': {'min': 650, 'max': 750, 'unit': 'mV', 'icon': '🔋'},
     'FAC': {'min': 1.0, 'max': 3.0, 'unit': 'ppm', 'icon': '🟢'}
+    'Temperatura': {'min': 22, 'max': 28, 'unit': '°C', 'icon': '🌡️'}
 }
 
 def check_parameter_status(value, param):
@@ -309,6 +310,7 @@ def get_chart_range(param):
         'TDS': [1000, 5000],
         'ORP': [200, 800],
         'FAC': [0, 3]
+        'Temperatura': [20, 35]
     }
     return ranges.get(param, None)
 def analyze_alerts(df, mant_sheet=None):
@@ -533,7 +535,7 @@ def main():
         
         # Dashboard con tarjetas
         cols = st.columns(3)
-        params = ['pH', 'Sal', 'FAC', 'ORP', 'Conductividad', 'TDS']
+        params = ['pH', 'Sal', 'FAC', 'ORP', 'Conductividad', 'TDS','Temperatura']
         
         for i, param in enumerate(params):
             with cols[i % 3]:
@@ -655,6 +657,7 @@ def main():
                 ph = st.number_input("pH", min_value=0.0, max_value=14.0, value=7.4, step=0.1)
                 fac = st.number_input("FAC (ppm)", min_value=0.0, max_value=10.0, value=0.5, step=0.1)
                 orp = st.number_input("ORP (mV)", min_value=0, value=700, step=10)
+                temperatura = st.number_input("Temperatura (°C)", min_value=0.0, max_value=50.0, value=25.0, step=0.5)
             
             with col2:
                 st.markdown("#### 💧 Salinidad y Conductividad")
@@ -674,6 +677,7 @@ def main():
                 'Sal': normalize_decimal(sal), 
                 'ORP': normalize_decimal(orp), 
                 'FAC': normalize_decimal(fac)
+                'Temperatura': normalize_decimal(temperatura)
             }
         except ValueError:
             st.error("⚠️ Error en formato de números. Verifica que uses punto (.) como separador decimal.")
@@ -712,6 +716,7 @@ def main():
                     sal_norm = str(float(str(sal).replace(',', '.')))
                     orp_norm = str(float(str(orp).replace(',', '.')))
                     fac_norm = str(float(str(fac).replace(',', '.')))
+                    temperatura_norm = str(float(str(temperatura).replace(',', '.')))
                     
                     data_row = [
                         fecha.strftime('%Y-%m-%d'),
@@ -743,7 +748,7 @@ def main():
         # Selector de parámetros mejorado
         col1, col2 = st.columns([2, 1])
         with col1:
-            parametros = ['pH', 'Conductividad', 'TDS', 'Sal', 'ORP', 'FAC']
+            parametros = ['pH', 'Conductividad', 'TDS', 'Sal', 'ORP', 'FAC','Temperatura']
             param_seleccionado = st.selectbox("📊 Selecciona parámetro:", parametros)
         
         with col2:
@@ -777,6 +782,7 @@ def main():
                 'TDS': {'min': 1500, 'max': 5000},        # Óptimo: 1500-3000
                 'ORP': {'min': 500, 'max': 900},          # Óptimo: 650-750 (mucho más margen)
                 'FAC': {'min': 0, 'max': 5}              # Óptimo: 1.0-3.0
+                'Temperatura': {'min': 20, 'max': 35}
             }
 
             for param in params_multi:
