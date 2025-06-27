@@ -912,10 +912,11 @@ def main():
             with col1:
                 fecha_mant = st.date_input("📅 Fecha", value=date.today(), key="mant_fecha")
                 tipo_mant = st.selectbox("🔧 Tipo de Mantenimiento", [
-                    "Limpieza filtro bolas",
-                    "Cambio filtro bolas", 
-                    "Limpieza skimmers",
                     "Aspirado fondo",
+                    "Limpieza filtro",
+                    "Adición de químicos",
+                    "Cambio filtro", 
+                    "Limpieza skimmers",
                     "Limpieza paredes",
                     "Calibración sondas",
                     "Revisión célula sal",
@@ -933,7 +934,7 @@ def main():
                     tipo_final = tipo_mant
                     
                 estado_antes = st.selectbox("Estado antes", ["Bueno", "Regular", "Malo", "Crítico"])
-                tiempo_empleado = st.number_input("⏱️ Tiempo empleado (minutos)", min_value=0, value=30, step=5)
+                tiempo_empleado = st.number_input("⏱️ Tiempo empleado (minutos)", min_value=0, value=5, step=5)
             
             # Notas y observaciones
             notas = st.text_area("📝 Notas y observaciones", 
@@ -950,12 +951,13 @@ def main():
                 if programar_siguiente:
                     # Sugerencias automáticas según tipo
                     sugerencias_dias = {
-                        "Limpieza filtro bolas": 7,
-                        "Cambio filtro bolas": 30,
+                        "Limpieza filtro": 5,
+                        "Adición de químicos": 3,                        
                         "Limpieza skimmers": 3,
-                        "Aspirado fondo": 7,
-                        "Calibración sondas": 15,
-                        "Revisión célula sal": 30
+                        "Aspirado fondo": 3,
+                        "Calibración sondas": 30,
+                        "Revisión célula sal": 30,
+                        "Cambio filtro": 365
                     }
                     dias_sugeridos = sugerencias_dias.get(tipo_final, 14)
                     fecha_siguiente = st.date_input("Próximo mantenimiento", 
