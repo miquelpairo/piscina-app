@@ -179,6 +179,43 @@ def clear_maintenance_alert(mant_sheet, row_index):
     except Exception as e:
         st.error(f"Error borrando alerta: {e}")
         return False
+def clear_maintenance_alert_by_data(mant_sheet, tipo_mantenimiento, fecha_programada):
+    """
+    Borra la alerta de mantenimiento buscando por tipo y fecha exacta
+    """
+    try:
+        # Obtener todos los datos como lista de listas
+        all_data = mant_sheet.get_all_values()
+        
+        if not all_data or len(all_data) < 2:  # No hay datos o solo header
+            return False
+        
+        # Convertir fecha a string en formato que esperamos en Google Sheets
+        fecha_buscar = fecha_programada.strftime('%Y-%m-%d')
+        
+        # Buscar la fila que coincida
+        for row_num, row_data in enumerate(all_data):
+            if row_num == 0:  # Saltar header
+                continue
+                
+            # Verificar que la fila tenga suficientes columnas
+            if len(row_data) >= 6:
+                # Columna 1 = Tipo (índice 1), Columna 5 = Proximo_Mantenimiento (índice 5)
+                if (row_data[1] == tipo_mantenimiento and 
+                    row_data[5] == fecha_buscar):
+                    
+                    # Encontramos la fila, limpiar la columna F (Proximo_Mantenimiento)
+                    # row_num + 1 porque Google Sheets usa índice base-1
+                    cell_address = f"F{row_num + 1}"
+                    mant_sheet.update(cell_address, "")
+                    
+                    return True
+        
+        return False
+        
+    except Exception as e:
+        st.error(f"Error borrando alerta: {e}")
+        return False
 
 def add_maintenance_to_sheets(mant_sheet, data):
     """Añade una nueva fila de mantenimiento a Google Sheets"""
@@ -399,33 +436,79 @@ def analyze_alerts(df, mant_sheet=None):
             maint_df = get_maintenance_data(mant_sheet)
             if not maint_df.empty and 'Proximo_Mantenimiento' in maint_df.columns:
                 
-                # Filtrar mantenimientos vencidos
-                overdue_tasks = []
+                # Obtener TODOS los mantenimientos programados
+                scheduled_tasks = maint_df[
+                    maint_df['Proximo_Mantenimiento'].notna()
+                ].copy()
                 
-                for _, task in maint_df.iterrows():
-                    if pd.notna(task['Proximo_Mantenimiento']) and task['Proximo_Mantenimiento'] <= pd.Timestamp.now():
-                        
-                        # Verificar si ya se hizo mantenimiento del mismo tipo después de la fecha programada
-                        same_type_after = maint_df[
-                            (maint_df['Tipo'] == task['Tipo']) & 
-                            (maint_df['Fecha'] >= task['Proximo_Mantenimiento'])
+                if not scheduled_tasks.empty:
+                    # Separar vencidos de próximos
+                    overdue_tasks = scheduled_tasks[
+                        scheduled_tasks['Proximo_Mantenimiento'] <= pd.Timestamp.now()
+                    ]
+                    
+                    upcoming_tasks = scheduled_tasks[
+                        scheduled_tasks['Proximo_Mantenimiento'] > pd.Timestamp.now()
+                    ]
+                    
+                    # Alerta para vencidos (alta prioridad)
+                    if not overdue_tasks.empty:
+                        alerts.append({
+                            'type': 'maintenance',
+                            'title': '🔧 Mantenimiento Vencido',
+                            'message': f"{len(overdue_tasks)} tarea(s) de mantenimiento vencida(s)",
+                            'details': [
+                                {
+                                    'Tipo': t['Tipo'], 
+                                    'Proximo_Mantenimiento': t['Proximo_Mantenimiento'],
+                                    'Status': 'vencido'
+                                } 
+                                for _, t in overdue_tasks.iterrows()
+                            ],
+                            'priority': 'high'
+                        })
+                    
+                    # Alerta informativa para próximos (prioridad media)
+                    if not upcoming_tasks.empty:
+                        # Solo mostrar los próximos 7 días como alerta normal
+                        soon_tasks = upcoming_tasks[
+                            upcoming_tasks['Proximo_Mantenimiento'] <= pd.Timestamp.now() + pd.Timedelta(days=7)
                         ]
                         
-                        # Si no hay mantenimiento del mismo tipo posterior, sigue vencido
-                        if same_type_after.empty:
-                            overdue_tasks.append(task)
-                        else:
-                             pass           
-                if overdue_tasks:
+                        if not soon_tasks.empty:
+                            alerts.append({
+                                'type': 'maintenance',
+                                'title': '📅 Mantenimiento Próximo',
+                                'message': f"{len(soon_tasks)} tarea(s) programada(s) en los próximos 7 días",
+                                'details': [
+                                    {
+                                        'Tipo': t['Tipo'], 
+                                        'Proximo_Mantenimiento': t['Proximo_Mantenimiento'],
+                                        'Status': 'próximo'
+                                    } 
+                                    for _, t in soon_tasks.iterrows()
+                                ],
+                                'priority': 'medium'
+                            })
+                    
+                    # Alerta informativa para TODOS los programados (mostrar con botones para borrar)
                     alerts.append({
-                        'type': 'maintenance',
-                        'title': '🔧 Mantenimiento Vencido',
-                        'message': f"{len(overdue_tasks)} tarea(s) de mantenimiento pendiente(s)",
-                        'details': [{'Tipo': t['Tipo'], 'Proximo_Mantenimiento': t['Proximo_Mantenimiento']} for t in overdue_tasks],
-                        'priority': 'high'
+                        'type': 'maintenance_all',
+                        'title': '🗂️ Gestionar Recordatorios',
+                        'message': f"{len(scheduled_tasks)} recordatorio(s) activo(s)",
+                        'details': [
+                            {
+                                'Tipo': t['Tipo'], 
+                                'Proximo_Mantenimiento': t['Proximo_Mantenimiento'],
+                                'Status': 'programado'
+                            } 
+                            for _, t in scheduled_tasks.iterrows()
+                        ],
+                        'priority': 'info'
                     })
+                        
         except Exception:
-            pass  # Si hay error con mantenimiento, no mostrar alerta
+            pass  # Si hay error con mantenimiento, no mostrar alerta            
             
     return alerts
 
@@ -477,31 +560,27 @@ def display_alerts(alerts):
                        """, unsafe_allow_html=True)
            
            elif alert['type'] == 'maintenance':
-               st.markdown("**Mantenimientos vencidos:**")
+               st.markdown("**Mantenimientos:**")
                for detail in alert['details']:
                    col1, col2 = st.columns([3, 1])
                    with col1:
-                       st.write(f"• {detail['Tipo']} - {detail['Proximo_Mantenimiento'].strftime('%d/%m/%Y')}")
+                       status_emoji = "🔴" if detail.get('Status') == 'vencido' else "⏰"
+                       st.write(f"{status_emoji} {detail['Tipo']} - {detail['Proximo_Mantenimiento'].strftime('%d/%m/%Y')}")
                    with col2:
-                       # Botón para marcar como completado
-                       if st.button("✅ Completado", key=f"complete_{detail['Tipo']}_{detail['Proximo_Mantenimiento']}", 
-                                   help="Marcar este mantenimiento como completado"):
-                           # Encontrar el índice de esta fila en el DataFrame
-                           try:
-                               maint_df = get_maintenance_data(st.session_state.mant_sheet)
-                               matching_rows = maint_df[
-                                   (maint_df['Tipo'] == detail['Tipo']) & 
-                                   (maint_df['Proximo_Mantenimiento'] == detail['Proximo_Mantenimiento'])
-                               ]
-                               if not matching_rows.empty:
-                                   row_index = matching_rows.index[0]
-                                   if clear_maintenance_alert(st.session_state.mant_sheet, row_index):
-                                       st.success(f"✅ Alerta de {detail['Tipo']} marcada como completada")
-                                       st.rerun()  # Recargar la página para actualizar las alertas
-                                   else:
-                                       st.error("❌ Error al marcar como completado")
-                           except Exception as e:
-                               st.error(f"Error: {e}")
+                       # Botón para marcar como completado/cancelar
+                       button_text = "✅ Completado" if detail.get('Status') == 'vencido' else "🗑️ Cancelar"
+                       if st.button(button_text, key=f"action_{detail['Tipo']}_{detail['Proximo_Mantenimiento']}", 
+                                   help="Marcar como completado o cancelar recordatorio"):
+                           
+                           if clear_maintenance_alert_by_data(
+                               st.session_state.mant_sheet, 
+                               detail['Tipo'], 
+                               detail['Proximo_Mantenimiento']
+                           ):
+                               st.success(f"✅ {detail['Tipo']} procesado correctamente")
+                               st.rerun()
+                           else:
+                               st.error("❌ Error al procesar")
    
    # Alertas de prioridad media
    for alert in medium_priority:
@@ -521,7 +600,104 @@ def display_alerts(alerts):
            </div>
        </div>
        """, unsafe_allow_html=True)
+       
+       # Mostrar detalles para mantenimiento próximo también
+       if 'details' in alert and alert['type'] == 'maintenance':
+           for detail in alert['details']:
+               col1, col2 = st.columns([3, 1])
+               with col1:
+                   st.write(f"📅 {detail['Tipo']} - {detail['Proximo_Mantenimiento'].strftime('%d/%m/%Y')}")
+               with col2:
+                   if st.button("🗑️ Cancelar", key=f"cancel_medium_{detail['Tipo']}_{detail['Proximo_Mantenimiento']}", 
+                               help="Cancelar recordatorio"):
+                       
+                       if clear_maintenance_alert_by_data(
+                           st.session_state.mant_sheet, 
+                           detail['Tipo'], 
+                           detail['Proximo_Mantenimiento']
+                       ):
+                           st.success(f"✅ Recordatorio '{detail['Tipo']}' cancelado")
+                           st.rerun()
+                       else:
+                           st.error("❌ Error al cancelar")
+
+   # CORRECCIÓN: Alertas informativas FUERA del bucle anterior (indentación correcta)
+   info_alerts = [a for a in alerts if a.get('priority') == 'info']
    
+   for alert in info_alerts:
+       if alert.get('type') == 'maintenance_all':
+           color = "#17a2b8"  # Azul info
+           icon = "🗂️"
+           
+           # Contenedor colapsable para no saturar el dashboard
+           with st.expander(f"{icon} {alert['title']} - {alert['message']}", expanded=False):
+               
+               st.markdown("**Todos los recordatorios de mantenimiento activos:**")
+               st.markdown("*Haz clic en 🗑️ para cancelar un recordatorio*")
+               
+               # Mostrar cada mantenimiento con botón para borrar
+               for detail in alert['details']:
+                   col1, col2, col3 = st.columns([4, 2, 1])
+                   
+                   days_until = (detail['Proximo_Mantenimiento'].date() - pd.Timestamp.now().date()).days
+                   
+                   # Determinar estilo según proximidad
+                   if days_until < 0:
+                       status_text = "VENCIDO"
+                       status_color = "#dc3545"
+                       status_icon = "🔴"
+                   elif days_until <= 2:
+                       status_text = "URGENTE"
+                       status_color = "#fd7e14"
+                       status_icon = "🟠"
+                   elif days_until <= 7:
+                       status_text = "PRÓXIMO"
+                       status_color = "#ffc107"
+                       status_icon = "🟡"
+                   else:
+                       status_text = "PROGRAMADO"
+                       status_color = "#28a745"
+                       status_icon = "🟢"
+                   
+                   with col1:
+                       st.markdown(f"""
+                       <div style="padding: 8px; border-left: 3px solid {status_color}; 
+                                  background: rgba(255,255,255,0.05); border-radius: 5px;">
+                           <strong>{detail['Tipo']}</strong><br>
+                           <small>📅 {detail['Proximo_Mantenimiento'].strftime('%d/%m/%Y')}</small>
+                       </div>
+                       """, unsafe_allow_html=True)
+                   
+                   with col2:
+                       st.markdown(f"""
+                       <div style="text-align: center; padding: 8px;">
+                           {status_icon} <span style="color: {status_color}; font-weight: bold;">{status_text}</span><br>
+                           <small>{abs(days_until)} día{'s' if abs(days_until) != 1 else ''}</small>
+                       </div>
+                       """, unsafe_allow_html=True)
+                   
+                   with col3:
+                       # Botón para cancelar recordatorio
+                       unique_key = f"cancel_all_{detail['Tipo']}_{detail['Proximo_Mantenimiento'].strftime('%Y%m%d')}"
+                       
+                       if st.button("🗑️", 
+                                  key=unique_key, 
+                                  help=f"Cancelar recordatorio: {detail['Tipo']}",
+                                  type="secondary"):
+                           
+                           if clear_maintenance_alert_by_data(
+                               st.session_state.mant_sheet, 
+                               detail['Tipo'], 
+                               detail['Proximo_Mantenimiento']
+                           ):
+                               st.success(f"✅ Recordatorio '{detail['Tipo']}' cancelado")
+                               st.rerun()
+                           else:
+                               st.error("❌ Error al cancelar el recordatorio")
+                   
+                   # Pequeño espaciador visual
+                   st.markdown("<br>", unsafe_allow_html=True)
+    
    st.markdown("---")
 
 def normalize_decimal(value):
