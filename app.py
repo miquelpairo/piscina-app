@@ -168,44 +168,6 @@ def get_maintenance_data(mant_sheet):
         st.error(f"Error obteniendo datos de mantenimiento: {e}")
         return pd.DataFrame()
 
-def clear_maintenance_alert_by_data(mant_sheet, tipo_mantenimiento, fecha_programada):
-    """
-    Borra la alerta de mantenimiento buscando por tipo y fecha exacta
-    """
-    try:
-        # Obtener todos los datos como lista de listas
-        all_data = mant_sheet.get_all_values()
-        
-        if not all_data or len(all_data) < 2:  # No hay datos o solo header
-            return False
-        
-        # Convertir fecha a string en formato que esperamos en Google Sheets
-        fecha_buscar = fecha_programada.strftime('%Y-%m-%d')
-        
-        # Buscar la fila que coincida
-        for row_num, row_data in enumerate(all_data):
-            if row_num == 0:  # Saltar header
-                continue
-                
-            # Verificar que la fila tenga suficientes columnas
-            if len(row_data) >= 6:
-                # Columna 1 = Tipo (índice 1), Columna 5 = Proximo_Mantenimiento (índice 5)
-                if (row_data[1] == tipo_mantenimiento and 
-                    row_data[5] == fecha_buscar):
-                    
-                    # Encontramos la fila, limpiar la columna F (Proximo_Mantenimiento)
-                    # row_num + 1 porque Google Sheets usa índice base-1
-                    cell_address = f"F{row_num + 1}"
-                    mant_sheet.update(cell_address, "")
-                    
-                    return True
-        
-        return False
-        
-    except Exception as e:
-        st.error(f"Error borrando alerta: {e}")
-        return False
-
 def add_maintenance_to_sheets(mant_sheet, data):
     """Añade una nueva fila de mantenimiento a Google Sheets"""
     try:
@@ -214,6 +176,7 @@ def add_maintenance_to_sheets(mant_sheet, data):
     except Exception as e:
         st.error(f"Error guardando mantenimiento: {e}")
         return False
+
 
 # Rangos óptimos para piscina de sal
 RANGES = {
@@ -337,6 +300,7 @@ def create_enhanced_chart(df, param_seleccionado):
     
     return fig
 
+
 def get_chart_range(param):
     """Define rangos personalizados para cada parámetro en los gráficos"""
     ranges = {
@@ -349,7 +313,6 @@ def get_chart_range(param):
         'Temperatura': [20, 35]
     }
     return ranges.get(param, None)
-
 def analyze_alerts(df, mant_sheet=None):
     """Analiza los datos y genera alertas para el dashboard"""
     alerts = []
@@ -418,7 +381,7 @@ def analyze_alerts(df, mant_sheet=None):
                     'priority': 'medium'
                 })
     
-    # 4. Mantenimiento vencido (versión original limpia)
+    # 4. Mantenimiento vencido (si se proporciona mant_sheet)
     if mant_sheet:
         try:
             maint_df = get_maintenance_data(mant_sheet)
@@ -439,7 +402,8 @@ def analyze_alerts(df, mant_sheet=None):
                         # Si no hay mantenimiento del mismo tipo posterior, sigue vencido
                         if same_type_after.empty:
                             overdue_tasks.append(task)
-                            
+                        else:
+                             pass           
                 if overdue_tasks:
                     alerts.append({
                         'type': 'maintenance',
@@ -499,28 +463,6 @@ def display_alerts(alerts):
                             <div style="color: {color}; font-size: 0.9rem;">{status_text}</div>
                         </div>
                         """, unsafe_allow_html=True)
-            
-            elif alert['type'] == 'maintenance':
-                st.markdown("**Mantenimientos vencidos:**")
-                for detail in alert['details']:
-                    col1, col2 = st.columns([3, 1])
-                    with col1:
-                        st.write(f"• {detail['Tipo']} - {detail['Proximo_Mantenimiento'].strftime('%d/%m/%Y')}")
-                    with col2:
-                        # Botón para marcar como completado
-                        if st.button("✅ Completado", 
-                                    key=f"complete_{detail['Tipo']}_{detail['Proximo_Mantenimiento']}", 
-                                    help="Marcar este mantenimiento como completado"):
-                            
-                            if clear_maintenance_alert_by_data(
-                                st.session_state.mant_sheet, 
-                                detail['Tipo'], 
-                                detail['Proximo_Mantenimiento']
-                            ):
-                                st.success(f"✅ Alerta de {detail['Tipo']} marcada como completada")
-                                st.rerun()
-                            else:
-                                st.error("❌ Error al marcar como completado")
     
     # Alertas de prioridad media
     for alert in medium_priority:
@@ -563,9 +505,6 @@ def main():
     if sheet is None or mant_sheet is None:
         st.error("⚠️ No se pudo conectar con Google Sheets. Verifica la configuración.")
         return
-
-    # Guardar en session_state para acceso global
-    st.session_state.mant_sheet = mant_sheet
     
     # Sidebar mejorado
     with st.sidebar:
@@ -574,6 +513,8 @@ def main():
                       ["🏠 Dashboard", "📝 Nueva Medición", "📈 Gráficos", 
                        "📋 Historial", "🔧 Mantenimiento", "ℹ️ Rangos Óptimos"],
                       index=0)
+        
+
         
     if tab == "🏠 Dashboard":
         # Obtener datos más recientes
@@ -656,59 +597,41 @@ def main():
                     # Obtener los 3 próximos
                     next_maintenance = future_maintenance.nsmallest(3, 'Proximo_Mantenimiento')
                     
-                    # Crear columnas para cada mantenimiento
+                    # Crear columnas
+                    cols = st.columns(min(len(next_maintenance), 3))
+                    
                     for i, (_, maintenance_row) in enumerate(next_maintenance.iterrows()):
-                        col1, col2 = st.columns([4, 1])  # Columna principal y botón
-                        
-                        with col1:
-                            days_until = (maintenance_row['Proximo_Mantenimiento'].date() - pd.Timestamp.now().date()).days
-                            
-                            # Colores
-                            if days_until <= 2:
-                                color = "#ff6b6b"
-                                icon = "🔴"
-                            elif days_until <= 7:
-                                color = "#ffa726"
-                                icon = "🟠"
-                            else:
-                                color = "#4caf50"
-                                icon = "🟢"
-                            
-                            st.markdown(f"""
-                            <div style="background: rgba(255, 255, 255, 0.9); border-radius: 10px; 
-                                       padding: 15px; margin: 5px; text-align: center;
-                                       border-left: 4px solid {color};">
-                                <div style="font-size: 1.2rem;">{icon}</div>
-                                <div style="font-weight: bold; color: #333; margin: 5px 0;">
-                                    {maintenance_row['Tipo']}
-                                </div>
-                                <div style="color: {color}; font-weight: bold;">
-                                    {maintenance_row['Proximo_Mantenimiento'].strftime('%d/%m/%Y')}
-                                </div>
-                                <div style="color: #666; font-size: 0.9rem;">
-                                    {days_until} día{'s' if days_until != 1 else ''}
-                                </div>
-                            </div>
-                            """, unsafe_allow_html=True)
-                        
-                        with col2:
-                            # Botón para cancelar
-                            key_cancel = f"cancel_dashboard_{maintenance_row['Tipo']}_{maintenance_row['Proximo_Mantenimiento'].strftime('%Y%m%d')}"
-                            
-                            if st.button("🗑️", 
-                                       key=key_cancel, 
-                                       help=f"Cancelar recordatorio: {maintenance_row['Tipo']}",
-                                       type="secondary"):
+                        if i < 3:  # Solo mostrar máximo 3
+                            with cols[i]:
+                                days_until = (maintenance_row['Proximo_Mantenimiento'].date() - pd.Timestamp.now().date()).days
                                 
-                                if clear_maintenance_alert_by_data(
-                                    st.session_state.mant_sheet, 
-                                    maintenance_row['Tipo'], 
-                                    maintenance_row['Proximo_Mantenimiento']
-                                ):
-                                    st.success(f"✅ Recordatorio '{maintenance_row['Tipo']}' cancelado")
-                                    st.rerun()
+                                # Colores
+                                if days_until <= 2:
+                                    color = "#ff6b6b"
+                                    icon = "🔴"
+                                elif days_until <= 7:
+                                    color = "#ffa726"
+                                    icon = "🟠"
                                 else:
-                                    st.error("❌ Error al cancelar el recordatorio")
+                                    color = "#4caf50"
+                                    icon = "🟢"
+                                
+                                st.markdown(f"""
+                                <div style="background: rgba(255, 255, 255, 0.9); border-radius: 10px; 
+                                           padding: 15px; margin: 5px; text-align: center;
+                                           border-left: 4px solid {color};">
+                                    <div style="font-size: 1.2rem;">{icon}</div>
+                                    <div style="font-weight: bold; color: #333; margin: 5px 0;">
+                                        {maintenance_row['Tipo']}
+                                    </div>
+                                    <div style="color: {color}; font-weight: bold;">
+                                        {maintenance_row['Proximo_Mantenimiento'].strftime('%d/%m/%Y')}
+                                    </div>
+                                    <div style="color: #666; font-size: 0.9rem;">
+                                        {days_until} día{'s' if days_until != 1 else ''}
+                                    </div>
+                                </div>
+                                """, unsafe_allow_html=True)
                 else:
                     st.info("📅 No hay mantenimientos programados próximamente.")
             else:
@@ -716,6 +639,7 @@ def main():
                 
         except Exception as e:
             st.error(f"Error: {str(e)}")
+ 
  
     elif tab == "📝 Nueva Medición":
         st.markdown("### 📝 Registrar Nueva Medición")
@@ -796,7 +720,7 @@ def main():
                     data_row = [
                         fecha.strftime('%Y-%m-%d'),
                         hora.strftime('%H:%M'),
-                        ph_norm, conductividad_norm, tds_norm, sal_norm, orp_norm, fac_norm, temperatura_norm
+                        ph_norm, conductividad_norm, tds_norm, sal_norm, orp_norm, fac_norm
                     ]
                     
                     if add_data_to_sheets(sheet, data_row):
@@ -1142,7 +1066,7 @@ def main():
             # Obtener datos reales de mantenimiento
             df_mant = get_maintenance_data(mant_sheet)
             
-            # Filtros
+            # PRIMERO definir los filtros
             st.markdown("##### 🔍 Filtros")
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -1152,12 +1076,12 @@ def main():
             with col3:
                 hasta = st.date_input("Hasta:", value=date.today(), key="mant_hasta")
             
-            # Aplicar filtros y mostrar datos
+            # DESPUÉS usar los filtros
             if not df_mant.empty:
                 # Aplicar filtros
                 df_mant_filtered = df_mant.copy()
                 
-                if filtro_tipo:
+                if filtro_tipo:  # Ahora sí está definido
                     df_mant_filtered = df_mant_filtered[df_mant_filtered['Tipo'].isin(filtro_tipo)]
                 
                 # Filtro por fechas
@@ -1172,95 +1096,12 @@ def main():
                         df_display['Proximo_Mantenimiento'] = df_display['Proximo_Mantenimiento'].dt.strftime('%d/%m/%Y')
                     
                     st.dataframe(df_display, use_container_width=True)
-                    
-                    # Gestionar Recordatorios Programados
-                    st.markdown("---")
-                    st.markdown("#### 🗂️ Gestionar Recordatorios Programados")
-                    
-                    # Obtener mantenimientos con recordatorios activos
-                    scheduled_maintenance = df_mant[
-                        df_mant['Proximo_Mantenimiento'].notna()
-                    ].copy()
-                    
-                    if not scheduled_maintenance.empty:
-                        st.markdown("**Recordatorios activos de mantenimiento:**")
-                        st.markdown("*Haz clic en 🗑️ para cancelar un recordatorio*")
-                        
-                        # Ordenar por fecha de próximo mantenimiento
-                        scheduled_maintenance = scheduled_maintenance.sort_values('Proximo_Mantenimiento')
-                        
-                        # Mostrar cada recordatorio con opción de cancelar
-                        for _, maintenance_row in scheduled_maintenance.iterrows():
-                            col1, col2, col3, col4 = st.columns([3, 2, 2, 1])
-                            
-                            days_until = (maintenance_row['Proximo_Mantenimiento'].date() - pd.Timestamp.now().date()).days
-                            
-                            # Determinar estado y color
-                            if days_until < 0:
-                                status = "🔴 VENCIDO"
-                                status_color = "#dc3545"
-                            elif days_until <= 2:
-                                status = "🟠 URGENTE"
-                                status_color = "#fd7e14"
-                            elif days_until <= 7:
-                                status = "🟡 PRÓXIMO"
-                                status_color = "#ffc107"
-                            else:
-                                status = "🟢 PROGRAMADO"
-                                status_color = "#28a745"
-                            
-                            with col1:
-                                st.markdown(f"""
-                                <div style="padding: 10px; border-left: 3px solid {status_color}; 
-                                           background: rgba(255,255,255,0.05); border-radius: 5px;">
-                                    <strong>{maintenance_row['Tipo']}</strong><br>
-                                    <small>Último: {maintenance_row['Fecha'].strftime('%d/%m/%Y')}</small>
-                                </div>
-                                """, unsafe_allow_html=True)
-                            
-                            with col2:
-                                st.markdown(f"""
-                                <div style="text-align: center; padding: 10px;">
-                                    <strong>📅 {maintenance_row['Proximo_Mantenimiento'].strftime('%d/%m/%Y')}</strong>
-                                </div>
-                                """, unsafe_allow_html=True)
-                            
-                            with col3:
-                                st.markdown(f"""
-                                <div style="text-align: center; padding: 10px;">
-                                    <span style="color: {status_color}; font-weight: bold;">{status}</span><br>
-                                    <small>{abs(days_until)} día{'s' if abs(days_until) != 1 else ''}</small>
-                                </div>
-                                """, unsafe_allow_html=True)
-                            
-                            with col4:
-                                # Botón para cancelar recordatorio
-                                key_hist = f"cancel_hist_{maintenance_row['Tipo']}_{maintenance_row['Proximo_Mantenimiento'].strftime('%Y%m%d')}"
-                                
-                                if st.button("🗑️", 
-                                           key=key_hist, 
-                                           help=f"Cancelar recordatorio: {maintenance_row['Tipo']}",
-                                           type="secondary"):
-                                    
-                                    if clear_maintenance_alert_by_data(
-                                        st.session_state.mant_sheet, 
-                                        maintenance_row['Tipo'], 
-                                        maintenance_row['Proximo_Mantenimiento']
-                                    ):
-                                        st.success(f"✅ Recordatorio '{maintenance_row['Tipo']}' cancelado")
-                                        st.rerun()
-                                    else:
-                                        st.error("❌ Error al cancelar el recordatorio")
-                            
-                            st.markdown("---")
-                    else:
-                        st.info("📅 No hay recordatorios programados actualmente.")
-                
                 else:
                     st.info("📊 No hay registros que coincidan con los filtros.")
             else:
                 st.info("📊 No hay registros de mantenimiento aún.")
             
+  
     elif tab == "ℹ️ Rangos Óptimos":
         st.markdown("### 📚 Guía Completa de Parámetros")
         
