@@ -168,17 +168,6 @@ def get_maintenance_data(mant_sheet):
         st.error(f"Error obteniendo datos de mantenimiento: {e}")
         return pd.DataFrame()
 
-def clear_maintenance_alert(mant_sheet, row_index):
-    """Borra la alerta de mantenimiento vaciando la celda Proximo_Mantenimiento"""
-    try:
-        # La columna F es Proximo_Mantenimiento (columna 6)
-        # row_index + 2 porque: +1 para índice base-1 de Google Sheets, +1 para saltar header
-        cell_address = f"F{row_index + 2}"
-        mant_sheet.update(cell_address, "")
-        return True
-    except Exception as e:
-        st.error(f"Error borrando alerta: {e}")
-        return False
 def clear_maintenance_alert_by_data(mant_sheet, tipo_mantenimiento, fecha_programada):
     """
     Borra la alerta de mantenimiento buscando por tipo y fecha exacta
@@ -225,7 +214,6 @@ def add_maintenance_to_sheets(mant_sheet, data):
     except Exception as e:
         st.error(f"Error guardando mantenimiento: {e}")
         return False
-
 
 # Rangos óptimos para piscina de sal
 RANGES = {
@@ -349,7 +337,6 @@ def create_enhanced_chart(df, param_seleccionado):
     
     return fig
 
-
 def get_chart_range(param):
     """Define rangos personalizados para cada parámetro en los gráficos"""
     ranges = {
@@ -362,6 +349,7 @@ def get_chart_range(param):
         'Temperatura': [20, 35]
     }
     return ranges.get(param, None)
+
 def analyze_alerts(df, mant_sheet=None):
     """Analiza los datos y genera alertas para el dashboard"""
     alerts = []
@@ -430,275 +418,130 @@ def analyze_alerts(df, mant_sheet=None):
                     'priority': 'medium'
                 })
     
-    # 4. Mantenimiento vencido (si se proporciona mant_sheet)
+    # 4. Mantenimiento vencido (versión original limpia)
     if mant_sheet:
         try:
             maint_df = get_maintenance_data(mant_sheet)
             if not maint_df.empty and 'Proximo_Mantenimiento' in maint_df.columns:
                 
-                # Obtener TODOS los mantenimientos programados
-                scheduled_tasks = maint_df[
-                    maint_df['Proximo_Mantenimiento'].notna()
-                ].copy()
+                # Filtrar mantenimientos vencidos
+                overdue_tasks = []
                 
-                if not scheduled_tasks.empty:
-                    # Separar vencidos de próximos
-                    overdue_tasks = scheduled_tasks[
-                        scheduled_tasks['Proximo_Mantenimiento'] <= pd.Timestamp.now()
-                    ]
-                    
-                    upcoming_tasks = scheduled_tasks[
-                        scheduled_tasks['Proximo_Mantenimiento'] > pd.Timestamp.now()
-                    ]
-                    
-                    # Alerta para vencidos (alta prioridad)
-                    if not overdue_tasks.empty:
-                        alerts.append({
-                            'type': 'maintenance',
-                            'title': '🔧 Mantenimiento Vencido',
-                            'message': f"{len(overdue_tasks)} tarea(s) de mantenimiento vencida(s)",
-                            'details': [
-                                {
-                                    'Tipo': t['Tipo'], 
-                                    'Proximo_Mantenimiento': t['Proximo_Mantenimiento'],
-                                    'Status': 'vencido'
-                                } 
-                                for _, t in overdue_tasks.iterrows()
-                            ],
-                            'priority': 'high'
-                        })
-                    
-                    # Alerta informativa para próximos (prioridad media)
-                    if not upcoming_tasks.empty:
-                        # Solo mostrar los próximos 7 días como alerta normal
-                        soon_tasks = upcoming_tasks[
-                            upcoming_tasks['Proximo_Mantenimiento'] <= pd.Timestamp.now() + pd.Timedelta(days=7)
+                for _, task in maint_df.iterrows():
+                    if pd.notna(task['Proximo_Mantenimiento']) and task['Proximo_Mantenimiento'] <= pd.Timestamp.now():
+                        
+                        # Verificar si ya se hizo mantenimiento del mismo tipo después de la fecha programada
+                        same_type_after = maint_df[
+                            (maint_df['Tipo'] == task['Tipo']) & 
+                            (maint_df['Fecha'] >= task['Proximo_Mantenimiento'])
                         ]
                         
-                        if not soon_tasks.empty:
-                            alerts.append({
-                                'type': 'maintenance',
-                                'title': '📅 Mantenimiento Próximo',
-                                'message': f"{len(soon_tasks)} tarea(s) programada(s) en los próximos 7 días",
-                                'details': [
-                                    {
-                                        'Tipo': t['Tipo'], 
-                                        'Proximo_Mantenimiento': t['Proximo_Mantenimiento'],
-                                        'Status': 'próximo'
-                                    } 
-                                    for _, t in soon_tasks.iterrows()
-                                ],
-                                'priority': 'medium'
-                            })
-                    
-                    # Alerta informativa para TODOS los programados (mostrar con botones para borrar)
+                        # Si no hay mantenimiento del mismo tipo posterior, sigue vencido
+                        if same_type_after.empty:
+                            overdue_tasks.append(task)
+                            
+                if overdue_tasks:
                     alerts.append({
-                        'type': 'maintenance_all',
-                        'title': '🗂️ Gestionar Recordatorios',
-                        'message': f"{len(scheduled_tasks)} recordatorio(s) activo(s)",
-                        'details': [
-                            {
-                                'Tipo': t['Tipo'], 
-                                'Proximo_Mantenimiento': t['Proximo_Mantenimiento'],
-                                'Status': 'programado'
-                            } 
-                            for _, t in scheduled_tasks.iterrows()
-                        ],
-                        'priority': 'info'
+                        'type': 'maintenance',
+                        'title': '🔧 Mantenimiento Vencido',
+                        'message': f"{len(overdue_tasks)} tarea(s) de mantenimiento pendiente(s)",
+                        'details': [{'Tipo': t['Tipo'], 'Proximo_Mantenimiento': t['Proximo_Mantenimiento']} for t in overdue_tasks],
+                        'priority': 'high'
                     })
-                        
         except Exception:
-            pass  # Si hay error con mantenimiento, no mostrar alerta            
+            pass  # Si hay error con mantenimiento, no mostrar alerta
             
     return alerts
 
 def display_alerts(alerts):
-   """Muestra las alertas en el dashboard con estilos apropiados"""
-   if not alerts:
-       return
-   
-   st.markdown("### 🚨 Alertas del Sistema")
-   
-   # Separar por prioridad
-   high_priority = [a for a in alerts if a.get('priority') == 'high']
-   medium_priority = [a for a in alerts if a.get('priority') == 'medium']
-   
-   # Alertas de alta prioridad
-   for alert in high_priority:
-       color = "#dc3545"  # Rojo
-       icon = "🚨"
-       
-       st.markdown(f"""
-       <div style="background: linear-gradient(90deg, {color}15 0%, {color}05 100%); 
-                   border-left: 4px solid {color}; padding: 15px; margin: 10px 0; 
-                   border-radius: 8px;">
-           <div style="display: flex; align-items: center;">
-               <span style="font-size: 1.5rem; margin-right: 10px;">{icon}</span>
-               <div>
-                   <strong style="color: {color}; font-size: 1.1rem;">{alert['title']}</strong>
-                   <div style="color: #666; margin-top: 5px;">{alert['message']}</div>
-               </div>
-           </div>
-       </div>
-       """, unsafe_allow_html=True)
-       
-       # Mostrar detalles si existen
-       if 'details' in alert:
-           if alert['type'] == 'critical':
-               cols = st.columns(len(alert['details']))
-               for i, detail in enumerate(alert['details']):
-                   with cols[i]:
-                       status_text = "ALTO" if detail['status'] == 'high' else "BAJO"
-                       st.markdown(f"""
-                       <div style="text-align: center; padding: 10px; background: rgba(220,53,69,0.1); 
-                                  border-radius: 8px; margin: 5px;">
-                           <div style="font-size: 1.2rem;">{detail['icon']}</div>
-                           <div style="font-weight: bold;">{detail['param']}</div>
-                           <div style="color: {color};">{detail['value']} {detail['unit']}</div>
-                           <div style="color: {color}; font-size: 0.9rem;">{status_text}</div>
-                       </div>
-                       """, unsafe_allow_html=True)
-           
-           elif alert['type'] == 'maintenance':
-               st.markdown("**Mantenimientos:**")
-               for detail in alert['details']:
-                   col1, col2 = st.columns([3, 1])
-                   with col1:
-                       status_emoji = "🔴" if detail.get('Status') == 'vencido' else "⏰"
-                       st.write(f"{status_emoji} {detail['Tipo']} - {detail['Proximo_Mantenimiento'].strftime('%d/%m/%Y')}")
-                   with col2:
-                       # Botón para marcar como completado/cancelar
-                       button_text = "✅ Completado" if detail.get('Status') == 'vencido' else "🗑️ Cancelar"
-                       if st.button(button_text, key=f"action_{detail['Tipo']}_{detail['Proximo_Mantenimiento']}", 
-                                   help="Marcar como completado o cancelar recordatorio"):
-                           
-                           if clear_maintenance_alert_by_data(
-                               st.session_state.mant_sheet, 
-                               detail['Tipo'], 
-                               detail['Proximo_Mantenimiento']
-                           ):
-                               st.success(f"✅ {detail['Tipo']} procesado correctamente")
-                               st.rerun()
-                           else:
-                               st.error("❌ Error al procesar")
-   
-   # Alertas de prioridad media
-   for alert in medium_priority:
-       color = "#ffc107"  # Amarillo/Naranja
-       icon = "⚠️"
-       
-       st.markdown(f"""
-       <div style="background: linear-gradient(90deg, {color}15 0%, {color}05 100%); 
-                   border-left: 4px solid {color}; padding: 12px; margin: 8px 0; 
-                   border-radius: 8px;">
-           <div style="display: flex; align-items: center;">
-               <span style="font-size: 1.2rem; margin-right: 10px;">{icon}</span>
-               <div>
-                   <strong style="color: {color}; font-size: 1rem;">{alert['title']}</strong>
-                   <div style="color: #666; margin-top: 3px; font-size: 0.9rem;">{alert['message']}</div>
-               </div>
-           </div>
-       </div>
-       """, unsafe_allow_html=True)
-       
-       # Mostrar detalles para mantenimiento próximo también
-       if 'details' in alert and alert['type'] == 'maintenance':
-           for detail in alert['details']:
-               col1, col2 = st.columns([3, 1])
-               with col1:
-                   st.write(f"📅 {detail['Tipo']} - {detail['Proximo_Mantenimiento'].strftime('%d/%m/%Y')}")
-               with col2:
-                   if st.button("🗑️ Cancelar", key=f"cancel_medium_{detail['Tipo']}_{detail['Proximo_Mantenimiento']}", 
-                               help="Cancelar recordatorio"):
-                       
-                       if clear_maintenance_alert_by_data(
-                           st.session_state.mant_sheet, 
-                           detail['Tipo'], 
-                           detail['Proximo_Mantenimiento']
-                       ):
-                           st.success(f"✅ Recordatorio '{detail['Tipo']}' cancelado")
-                           st.rerun()
-                       else:
-                           st.error("❌ Error al cancelar")
-
-   # CORRECCIÓN: Alertas informativas FUERA del bucle anterior (indentación correcta)
-   info_alerts = [a for a in alerts if a.get('priority') == 'info']
-   
-   for alert in info_alerts:
-       if alert.get('type') == 'maintenance_all':
-           color = "#17a2b8"  # Azul info
-           icon = "🗂️"
-           
-           # Contenedor colapsable para no saturar el dashboard
-           with st.expander(f"{icon} {alert['title']} - {alert['message']}", expanded=False):
-               
-               st.markdown("**Todos los recordatorios de mantenimiento activos:**")
-               st.markdown("*Haz clic en 🗑️ para cancelar un recordatorio*")
-               
-               # Mostrar cada mantenimiento con botón para borrar
-               for detail in alert['details']:
-                   col1, col2, col3 = st.columns([4, 2, 1])
-                   
-                   days_until = (detail['Proximo_Mantenimiento'].date() - pd.Timestamp.now().date()).days
-                   
-                   # Determinar estilo según proximidad
-                   if days_until < 0:
-                       status_text = "VENCIDO"
-                       status_color = "#dc3545"
-                       status_icon = "🔴"
-                   elif days_until <= 2:
-                       status_text = "URGENTE"
-                       status_color = "#fd7e14"
-                       status_icon = "🟠"
-                   elif days_until <= 7:
-                       status_text = "PRÓXIMO"
-                       status_color = "#ffc107"
-                       status_icon = "🟡"
-                   else:
-                       status_text = "PROGRAMADO"
-                       status_color = "#28a745"
-                       status_icon = "🟢"
-                   
-                   with col1:
-                       st.markdown(f"""
-                       <div style="padding: 8px; border-left: 3px solid {status_color}; 
-                                  background: rgba(255,255,255,0.05); border-radius: 5px;">
-                           <strong>{detail['Tipo']}</strong><br>
-                           <small>📅 {detail['Proximo_Mantenimiento'].strftime('%d/%m/%Y')}</small>
-                       </div>
-                       """, unsafe_allow_html=True)
-                   
-                   with col2:
-                       st.markdown(f"""
-                       <div style="text-align: center; padding: 8px;">
-                           {status_icon} <span style="color: {status_color}; font-weight: bold;">{status_text}</span><br>
-                           <small>{abs(days_until)} día{'s' if abs(days_until) != 1 else ''}</small>
-                       </div>
-                       """, unsafe_allow_html=True)
-                   
-                   with col3:
-                       # Botón para cancelar recordatorio
-                       unique_key = f"cancel_all_{detail['Tipo']}_{detail['Proximo_Mantenimiento'].strftime('%Y%m%d')}"
-                       
-                       if st.button("🗑️", 
-                                  key=unique_key, 
-                                  help=f"Cancelar recordatorio: {detail['Tipo']}",
-                                  type="secondary"):
-                           
-                           if clear_maintenance_alert_by_data(
-                               st.session_state.mant_sheet, 
-                               detail['Tipo'], 
-                               detail['Proximo_Mantenimiento']
-                           ):
-                               st.success(f"✅ Recordatorio '{detail['Tipo']}' cancelado")
-                               st.rerun()
-                           else:
-                               st.error("❌ Error al cancelar el recordatorio")
-                   
-                   # Pequeño espaciador visual
-                   st.markdown("<br>", unsafe_allow_html=True)
+    """Muestra las alertas en el dashboard con estilos apropiados"""
+    if not alerts:
+        return
     
-   st.markdown("---")
+    st.markdown("### 🚨 Alertas del Sistema")
+    
+    # Separar por prioridad
+    high_priority = [a for a in alerts if a.get('priority') == 'high']
+    medium_priority = [a for a in alerts if a.get('priority') == 'medium']
+    
+    # Alertas de alta prioridad
+    for alert in high_priority:
+        color = "#dc3545"  # Rojo
+        icon = "🚨"
+        
+        st.markdown(f"""
+        <div style="background: linear-gradient(90deg, {color}15 0%, {color}05 100%); 
+                    border-left: 4px solid {color}; padding: 15px; margin: 10px 0; 
+                    border-radius: 8px;">
+            <div style="display: flex; align-items: center;">
+                <span style="font-size: 1.5rem; margin-right: 10px;">{icon}</span>
+                <div>
+                    <strong style="color: {color}; font-size: 1.1rem;">{alert['title']}</strong>
+                    <div style="color: #666; margin-top: 5px;">{alert['message']}</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Mostrar detalles si existen
+        if 'details' in alert:
+            if alert['type'] == 'critical':
+                cols = st.columns(len(alert['details']))
+                for i, detail in enumerate(alert['details']):
+                    with cols[i]:
+                        status_text = "ALTO" if detail['status'] == 'high' else "BAJO"
+                        st.markdown(f"""
+                        <div style="text-align: center; padding: 10px; background: rgba(220,53,69,0.1); 
+                                   border-radius: 8px; margin: 5px;">
+                            <div style="font-size: 1.2rem;">{detail['icon']}</div>
+                            <div style="font-weight: bold;">{detail['param']}</div>
+                            <div style="color: {color};">{detail['value']} {detail['unit']}</div>
+                            <div style="color: {color}; font-size: 0.9rem;">{status_text}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+            
+            elif alert['type'] == 'maintenance':
+                st.markdown("**Mantenimientos vencidos:**")
+                for detail in alert['details']:
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        st.write(f"• {detail['Tipo']} - {detail['Proximo_Mantenimiento'].strftime('%d/%m/%Y')}")
+                    with col2:
+                        # Botón para marcar como completado
+                        if st.button("✅ Completado", 
+                                    key=f"complete_{detail['Tipo']}_{detail['Proximo_Mantenimiento']}", 
+                                    help="Marcar este mantenimiento como completado"):
+                            
+                            if clear_maintenance_alert_by_data(
+                                st.session_state.mant_sheet, 
+                                detail['Tipo'], 
+                                detail['Proximo_Mantenimiento']
+                            ):
+                                st.success(f"✅ Alerta de {detail['Tipo']} marcada como completada")
+                                st.rerun()
+                            else:
+                                st.error("❌ Error al marcar como completado")
+    
+    # Alertas de prioridad media
+    for alert in medium_priority:
+        color = "#ffc107"  # Amarillo/Naranja
+        icon = "⚠️"
+        
+        st.markdown(f"""
+        <div style="background: linear-gradient(90deg, {color}15 0%, {color}05 100%); 
+                    border-left: 4px solid {color}; padding: 12px; margin: 8px 0; 
+                    border-radius: 8px;">
+            <div style="display: flex; align-items: center;">
+                <span style="font-size: 1.2rem; margin-right: 10px;">{icon}</span>
+                <div>
+                    <strong style="color: {color}; font-size: 1rem;">{alert['title']}</strong>
+                    <div style="color: #666; margin-top: 3px; font-size: 0.9rem;">{alert['message']}</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("---")
 
 def normalize_decimal(value):
     """Convierte comas decimales en puntos para compatibilidad móvil"""
@@ -724,7 +567,6 @@ def main():
     # Guardar en session_state para acceso global
     st.session_state.mant_sheet = mant_sheet
     
-    
     # Sidebar mejorado
     with st.sidebar:
         st.markdown("### 🎛️ Panel de Control")
@@ -732,8 +574,6 @@ def main():
                       ["🏠 Dashboard", "📝 Nueva Medición", "📈 Gráficos", 
                        "📋 Historial", "🔧 Mantenimiento", "ℹ️ Rangos Óptimos"],
                       index=0)
-        
-
         
     if tab == "🏠 Dashboard":
         # Obtener datos más recientes
@@ -800,83 +640,82 @@ def main():
             st.metric("⏰ Días Transcurridos", days_since)
             
         # Próximos mantenimientos en el dashboard
-            st.markdown("### 📅 Próximos Mantenimientos")
+        st.markdown("### 📅 Próximos Mantenimientos")
 
-            try:
-                maintenance_df = get_maintenance_data(mant_sheet)
+        try:
+            maintenance_df = get_maintenance_data(mant_sheet)
+            
+            if not maintenance_df.empty and 'Proximo_Mantenimiento' in maintenance_df.columns:
+                # Filtrar solo mantenimientos futuros
+                future_maintenance = maintenance_df[
+                    (maintenance_df['Proximo_Mantenimiento'].notna()) & 
+                    (maintenance_df['Proximo_Mantenimiento'] > pd.Timestamp.now())
+                ].copy()
                 
-                if not maintenance_df.empty and 'Proximo_Mantenimiento' in maintenance_df.columns:
-                    # Filtrar solo mantenimientos futuros
-                    future_maintenance = maintenance_df[
-                        (maintenance_df['Proximo_Mantenimiento'].notna()) & 
-                        (maintenance_df['Proximo_Mantenimiento'] > pd.Timestamp.now())
-                    ].copy()
+                if not future_maintenance.empty:
+                    # Obtener los 3 próximos
+                    next_maintenance = future_maintenance.nsmallest(3, 'Proximo_Mantenimiento')
                     
-                    if not future_maintenance.empty:
-                        # Obtener los 3 próximos
-                        next_maintenance = future_maintenance.nsmallest(3, 'Proximo_Mantenimiento')
+                    # Crear columnas para cada mantenimiento
+                    for i, (_, maintenance_row) in enumerate(next_maintenance.iterrows()):
+                        col1, col2 = st.columns([4, 1])  # Columna principal y botón
                         
-                        # Crear columnas - MODIFICADO: Ahora 4 columnas para incluir botón
-                        for i, (_, maintenance_row) in enumerate(next_maintenance.iterrows()):
-                            col1, col2 = st.columns([4, 1])  # Columna principal y botón
+                        with col1:
+                            days_until = (maintenance_row['Proximo_Mantenimiento'].date() - pd.Timestamp.now().date()).days
                             
-                            with col1:
-                                days_until = (maintenance_row['Proximo_Mantenimiento'].date() - pd.Timestamp.now().date()).days
-                                
-                                # Colores
-                                if days_until <= 2:
-                                    color = "#ff6b6b"
-                                    icon = "🔴"
-                                elif days_until <= 7:
-                                    color = "#ffa726"
-                                    icon = "🟠"
-                                else:
-                                    color = "#4caf50"
-                                    icon = "🟢"
-                                
-                                st.markdown(f"""
-                                <div style="background: rgba(255, 255, 255, 0.9); border-radius: 10px; 
-                                           padding: 15px; margin: 5px; text-align: center;
-                                           border-left: 4px solid {color};">
-                                    <div style="font-size: 1.2rem;">{icon}</div>
-                                    <div style="font-weight: bold; color: #333; margin: 5px 0;">
-                                        {maintenance_row['Tipo']}
-                                    </div>
-                                    <div style="color: {color}; font-weight: bold;">
-                                        {maintenance_row['Proximo_Mantenimiento'].strftime('%d/%m/%Y')}
-                                    </div>
-                                    <div style="color: #666; font-size: 0.9rem;">
-                                        {days_until} día{'s' if days_until != 1 else ''}
-                                    </div>
+                            # Colores
+                            if days_until <= 2:
+                                color = "#ff6b6b"
+                                icon = "🔴"
+                            elif days_until <= 7:
+                                color = "#ffa726"
+                                icon = "🟠"
+                            else:
+                                color = "#4caf50"
+                                icon = "🟢"
+                            
+                            st.markdown(f"""
+                            <div style="background: rgba(255, 255, 255, 0.9); border-radius: 10px; 
+                                       padding: 15px; margin: 5px; text-align: center;
+                                       border-left: 4px solid {color};">
+                                <div style="font-size: 1.2rem;">{icon}</div>
+                                <div style="font-weight: bold; color: #333; margin: 5px 0;">
+                                    {maintenance_row['Tipo']}
                                 </div>
-                                """, unsafe_allow_html=True)
+                                <div style="color: {color}; font-weight: bold;">
+                                    {maintenance_row['Proximo_Mantenimiento'].strftime('%d/%m/%Y')}
+                                </div>
+                                <div style="color: #666; font-size: 0.9rem;">
+                                    {days_until} día{'s' if days_until != 1 else ''}
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        
+                        with col2:
+                            # Botón para cancelar
+                            key_cancel = f"cancel_dashboard_{maintenance_row['Tipo']}_{maintenance_row['Proximo_Mantenimiento'].strftime('%Y%m%d')}"
                             
-                            with col2:
-                                # NUEVO: Botón para cancelar
-                                key_cancel = f"cancel_dashboard_{maintenance_row['Tipo']}_{maintenance_row['Proximo_Mantenimiento'].strftime('%Y%m%d')}"
+                            if st.button("🗑️", 
+                                       key=key_cancel, 
+                                       help=f"Cancelar recordatorio: {maintenance_row['Tipo']}",
+                                       type="secondary"):
                                 
-                                if st.button("🗑️", 
-                                           key=key_cancel, 
-                                           help=f"Cancelar recordatorio: {maintenance_row['Tipo']}",
-                                           type="secondary"):
-                                    
-                                    if clear_maintenance_alert_by_data(
-                                        st.session_state.mant_sheet, 
-                                        maintenance_row['Tipo'], 
-                                        maintenance_row['Proximo_Mantenimiento']
-                                    ):
-                                        st.success(f"✅ Recordatorio '{maintenance_row['Tipo']}' cancelado")
-                                        st.rerun()
-                                    else:
-                                        st.error("❌ Error al cancelar el recordatorio")
-                    else:
-                        st.info("📅 No hay mantenimientos programados próximamente.")
+                                if clear_maintenance_alert_by_data(
+                                    st.session_state.mant_sheet, 
+                                    maintenance_row['Tipo'], 
+                                    maintenance_row['Proximo_Mantenimiento']
+                                ):
+                                    st.success(f"✅ Recordatorio '{maintenance_row['Tipo']}' cancelado")
+                                    st.rerun()
+                                else:
+                                    st.error("❌ Error al cancelar el recordatorio")
                 else:
-                    st.info("📅 No hay datos de mantenimiento programado.")
-                    
-            except Exception as e:
-                st.error(f"Error: {str(e)}")
+                    st.info("📅 No hay mantenimientos programados próximamente.")
+            else:
+                st.info("📅 No hay datos de mantenimiento programado.")
                 
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
  
     elif tab == "📝 Nueva Medición":
         st.markdown("### 📝 Registrar Nueva Medición")
@@ -957,7 +796,7 @@ def main():
                     data_row = [
                         fecha.strftime('%Y-%m-%d'),
                         hora.strftime('%H:%M'),
-                        ph_norm, conductividad_norm, tds_norm, sal_norm, orp_norm, fac_norm
+                        ph_norm, conductividad_norm, tds_norm, sal_norm, orp_norm, fac_norm, temperatura_norm
                     ]
                     
                     if add_data_to_sheets(sheet, data_row):
@@ -1303,7 +1142,7 @@ def main():
             # Obtener datos reales de mantenimiento
             df_mant = get_maintenance_data(mant_sheet)
             
-            # PRIMERO definir los filtros
+            # Filtros
             st.markdown("##### 🔍 Filtros")
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -1313,12 +1152,12 @@ def main():
             with col3:
                 hasta = st.date_input("Hasta:", value=date.today(), key="mant_hasta")
             
-            # DESPUÉS usar los filtros
+            # Aplicar filtros y mostrar datos
             if not df_mant.empty:
                 # Aplicar filtros
                 df_mant_filtered = df_mant.copy()
                 
-                if filtro_tipo:  # Ahora sí está definido
+                if filtro_tipo:
                     df_mant_filtered = df_mant_filtered[df_mant_filtered['Tipo'].isin(filtro_tipo)]
                 
                 # Filtro por fechas
@@ -1333,95 +1172,95 @@ def main():
                         df_display['Proximo_Mantenimiento'] = df_display['Proximo_Mantenimiento'].dt.strftime('%d/%m/%Y')
                     
                     st.dataframe(df_display, use_container_width=True)
-                    # NUEVA SECCIÓN: Gestionar Mantenimientos Programados
-                            st.markdown("---")
-                            st.markdown("#### 🗂️ Gestionar Recordatorios Programados")
+                    
+                    # Gestionar Recordatorios Programados
+                    st.markdown("---")
+                    st.markdown("#### 🗂️ Gestionar Recordatorios Programados")
+                    
+                    # Obtener mantenimientos con recordatorios activos
+                    scheduled_maintenance = df_mant[
+                        df_mant['Proximo_Mantenimiento'].notna()
+                    ].copy()
+                    
+                    if not scheduled_maintenance.empty:
+                        st.markdown("**Recordatorios activos de mantenimiento:**")
+                        st.markdown("*Haz clic en 🗑️ para cancelar un recordatorio*")
+                        
+                        # Ordenar por fecha de próximo mantenimiento
+                        scheduled_maintenance = scheduled_maintenance.sort_values('Proximo_Mantenimiento')
+                        
+                        # Mostrar cada recordatorio con opción de cancelar
+                        for _, maintenance_row in scheduled_maintenance.iterrows():
+                            col1, col2, col3, col4 = st.columns([3, 2, 2, 1])
                             
-                            # Obtener mantenimientos con recordatorios activos
-                            scheduled_maintenance = df_mant[
-                                df_mant['Proximo_Mantenimiento'].notna()
-                            ].copy()
+                            days_until = (maintenance_row['Proximo_Mantenimiento'].date() - pd.Timestamp.now().date()).days
                             
-                            if not scheduled_maintenance.empty:
-                                st.markdown("**Recordatorios activos de mantenimiento:**")
-                                st.markdown("*Haz clic en 🗑️ para cancelar un recordatorio*")
-                                
-                                # Ordenar por fecha de próximo mantenimiento
-                                scheduled_maintenance = scheduled_maintenance.sort_values('Proximo_Mantenimiento')
-                                
-                                # Mostrar cada recordatorio con opción de cancelar
-                                for _, maintenance_row in scheduled_maintenance.iterrows():
-                                    col1, col2, col3, col4 = st.columns([3, 2, 2, 1])
-                                    
-                                    days_until = (maintenance_row['Proximo_Mantenimiento'].date() - pd.Timestamp.now().date()).days
-                                    
-                                    # Determinar estado y color
-                                    if days_until < 0:
-                                        status = "🔴 VENCIDO"
-                                        status_color = "#dc3545"
-                                    elif days_until <= 2:
-                                        status = "🟠 URGENTE"
-                                        status_color = "#fd7e14"
-                                    elif days_until <= 7:
-                                        status = "🟡 PRÓXIMO"
-                                        status_color = "#ffc107"
-                                    else:
-                                        status = "🟢 PROGRAMADO"
-                                        status_color = "#28a745"
-                                    
-                                    with col1:
-                                        st.markdown(f"""
-                                        <div style="padding: 10px; border-left: 3px solid {status_color}; 
-                                                   background: rgba(255,255,255,0.05); border-radius: 5px;">
-                                            <strong>{maintenance_row['Tipo']}</strong><br>
-                                            <small>Último: {maintenance_row['Fecha'].strftime('%d/%m/%Y')}</small>
-                                        </div>
-                                        """, unsafe_allow_html=True)
-                                    
-                                    with col2:
-                                        st.markdown(f"""
-                                        <div style="text-align: center; padding: 10px;">
-                                            <strong>📅 {maintenance_row['Proximo_Mantenimiento'].strftime('%d/%m/%Y')}</strong>
-                                        </div>
-                                        """, unsafe_allow_html=True)
-                                    
-                                    with col3:
-                                        st.markdown(f"""
-                                        <div style="text-align: center; padding: 10px;">
-                                            <span style="color: {status_color}; font-weight: bold;">{status}</span><br>
-                                            <small>{abs(days_until)} día{'s' if abs(days_until) != 1 else ''}</small>
-                                        </div>
-                                        """, unsafe_allow_html=True)
-                                    
-                                    with col4:
-                                        # Botón para cancelar recordatorio
-                                        key_hist = f"cancel_hist_{maintenance_row['Tipo']}_{maintenance_row['Proximo_Mantenimiento'].strftime('%Y%m%d')}"
-                                        
-                                        if st.button("🗑️", 
-                                                   key=key_hist, 
-                                                   help=f"Cancelar recordatorio: {maintenance_row['Tipo']}",
-                                                   type="secondary"):
-                                            
-                                            if clear_maintenance_alert_by_data(
-                                                st.session_state.mant_sheet, 
-                                                maintenance_row['Tipo'], 
-                                                maintenance_row['Proximo_Mantenimiento']
-                                            ):
-                                                st.success(f"✅ Recordatorio '{maintenance_row['Tipo']}' cancelado")
-                                                st.rerun()
-                                            else:
-                                                st.error("❌ Error al cancelar el recordatorio")
-                                    
-                                    st.markdown("---")
+                            # Determinar estado y color
+                            if days_until < 0:
+                                status = "🔴 VENCIDO"
+                                status_color = "#dc3545"
+                            elif days_until <= 2:
+                                status = "🟠 URGENTE"
+                                status_color = "#fd7e14"
+                            elif days_until <= 7:
+                                status = "🟡 PRÓXIMO"
+                                status_color = "#ffc107"
                             else:
-                                st.info("📅 No hay recordatorios programados actualmente.")
+                                status = "🟢 PROGRAMADO"
+                                status_color = "#28a745"
+                            
+                            with col1:
+                                st.markdown(f"""
+                                <div style="padding: 10px; border-left: 3px solid {status_color}; 
+                                           background: rgba(255,255,255,0.05); border-radius: 5px;">
+                                    <strong>{maintenance_row['Tipo']}</strong><br>
+                                    <small>Último: {maintenance_row['Fecha'].strftime('%d/%m/%Y')}</small>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            
+                            with col2:
+                                st.markdown(f"""
+                                <div style="text-align: center; padding: 10px;">
+                                    <strong>📅 {maintenance_row['Proximo_Mantenimiento'].strftime('%d/%m/%Y')}</strong>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            
+                            with col3:
+                                st.markdown(f"""
+                                <div style="text-align: center; padding: 10px;">
+                                    <span style="color: {status_color}; font-weight: bold;">{status}</span><br>
+                                    <small>{abs(days_until)} día{'s' if abs(days_until) != 1 else ''}</small>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            
+                            with col4:
+                                # Botón para cancelar recordatorio
+                                key_hist = f"cancel_hist_{maintenance_row['Tipo']}_{maintenance_row['Proximo_Mantenimiento'].strftime('%Y%m%d')}"
+                                
+                                if st.button("🗑️", 
+                                           key=key_hist, 
+                                           help=f"Cancelar recordatorio: {maintenance_row['Tipo']}",
+                                           type="secondary"):
+                                    
+                                    if clear_maintenance_alert_by_data(
+                                        st.session_state.mant_sheet, 
+                                        maintenance_row['Tipo'], 
+                                        maintenance_row['Proximo_Mantenimiento']
+                                    ):
+                                        st.success(f"✅ Recordatorio '{maintenance_row['Tipo']}' cancelado")
+                                        st.rerun()
+                                    else:
+                                        st.error("❌ Error al cancelar el recordatorio")
+                            
+                            st.markdown("---")
+                    else:
+                        st.info("📅 No hay recordatorios programados actualmente.")
                 
                 else:
                     st.info("📊 No hay registros que coincidan con los filtros.")
             else:
                 st.info("📊 No hay registros de mantenimiento aún.")
             
-  
     elif tab == "ℹ️ Rangos Óptimos":
         st.markdown("### 📚 Guía Completa de Parámetros")
         
