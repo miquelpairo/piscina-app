@@ -168,6 +168,18 @@ def get_maintenance_data(mant_sheet):
         st.error(f"Error obteniendo datos de mantenimiento: {e}")
         return pd.DataFrame()
 
+def clear_maintenance_alert(mant_sheet, row_index):
+    """Borra la alerta de mantenimiento vaciando la celda Proximo_Mantenimiento"""
+    try:
+        # La columna F es Proximo_Mantenimiento (columna 6)
+        # row_index + 2 porque: +1 para índice base-1 de Google Sheets, +1 para saltar header
+        cell_address = f"F{row_index + 2}"
+        mant_sheet.update(cell_address, "")
+        return True
+    except Exception as e:
+        st.error(f"Error borrando alerta: {e}")
+        return False
+
 def add_maintenance_to_sheets(mant_sheet, data):
     """Añade una nueva fila de mantenimiento a Google Sheets"""
     try:
@@ -418,72 +430,99 @@ def analyze_alerts(df, mant_sheet=None):
     return alerts
 
 def display_alerts(alerts):
-    """Muestra las alertas en el dashboard con estilos apropiados"""
-    if not alerts:
-        return
-    
-    st.markdown("### 🚨 Alertas del Sistema")
-    
-    # Separar por prioridad
-    high_priority = [a for a in alerts if a.get('priority') == 'high']
-    medium_priority = [a for a in alerts if a.get('priority') == 'medium']
-    
-    # Alertas de alta prioridad
-    for alert in high_priority:
-        color = "#dc3545"  # Rojo
-        icon = "🚨"
-        
-        st.markdown(f"""
-        <div style="background: linear-gradient(90deg, {color}15 0%, {color}05 100%); 
-                    border-left: 4px solid {color}; padding: 15px; margin: 10px 0; 
-                    border-radius: 8px;">
-            <div style="display: flex; align-items: center;">
-                <span style="font-size: 1.5rem; margin-right: 10px;">{icon}</span>
-                <div>
-                    <strong style="color: {color}; font-size: 1.1rem;">{alert['title']}</strong>
-                    <div style="color: #666; margin-top: 5px;">{alert['message']}</div>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Mostrar detalles si existen
-        if 'details' in alert:
-            if alert['type'] == 'critical':
-                cols = st.columns(len(alert['details']))
-                for i, detail in enumerate(alert['details']):
-                    with cols[i]:
-                        status_text = "ALTO" if detail['status'] == 'high' else "BAJO"
-                        st.markdown(f"""
-                        <div style="text-align: center; padding: 10px; background: rgba(220,53,69,0.1); 
-                                   border-radius: 8px; margin: 5px;">
-                            <div style="font-size: 1.2rem;">{detail['icon']}</div>
-                            <div style="font-weight: bold;">{detail['param']}</div>
-                            <div style="color: {color};">{detail['value']} {detail['unit']}</div>
-                            <div style="color: {color}; font-size: 0.9rem;">{status_text}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-    
-    # Alertas de prioridad media
-    for alert in medium_priority:
-        color = "#ffc107"  # Amarillo/Naranja
-        icon = "⚠️"
-        
-        st.markdown(f"""
-        <div style="background: linear-gradient(90deg, {color}15 0%, {color}05 100%); 
-                    border-left: 4px solid {color}; padding: 12px; margin: 8px 0; 
-                    border-radius: 8px;">
-            <div style="display: flex; align-items: center;">
-                <span style="font-size: 1.2rem; margin-right: 10px;">{icon}</span>
-                <div>
-                    <strong style="color: {color}; font-size: 1rem;">{alert['title']}</strong>
-                    <div style="color: #666; margin-top: 3px; font-size: 0.9rem;">{alert['message']}</div>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    st.markdown("---")
+   """Muestra las alertas en el dashboard con estilos apropiados"""
+   if not alerts:
+       return
+   
+   st.markdown("### 🚨 Alertas del Sistema")
+   
+   # Separar por prioridad
+   high_priority = [a for a in alerts if a.get('priority') == 'high']
+   medium_priority = [a for a in alerts if a.get('priority') == 'medium']
+   
+   # Alertas de alta prioridad
+   for alert in high_priority:
+       color = "#dc3545"  # Rojo
+       icon = "🚨"
+       
+       st.markdown(f"""
+       <div style="background: linear-gradient(90deg, {color}15 0%, {color}05 100%); 
+                   border-left: 4px solid {color}; padding: 15px; margin: 10px 0; 
+                   border-radius: 8px;">
+           <div style="display: flex; align-items: center;">
+               <span style="font-size: 1.5rem; margin-right: 10px;">{icon}</span>
+               <div>
+                   <strong style="color: {color}; font-size: 1.1rem;">{alert['title']}</strong>
+                   <div style="color: #666; margin-top: 5px;">{alert['message']}</div>
+               </div>
+           </div>
+       </div>
+       """, unsafe_allow_html=True)
+       
+       # Mostrar detalles si existen
+       if 'details' in alert:
+           if alert['type'] == 'critical':
+               cols = st.columns(len(alert['details']))
+               for i, detail in enumerate(alert['details']):
+                   with cols[i]:
+                       status_text = "ALTO" if detail['status'] == 'high' else "BAJO"
+                       st.markdown(f"""
+                       <div style="text-align: center; padding: 10px; background: rgba(220,53,69,0.1); 
+                                  border-radius: 8px; margin: 5px;">
+                           <div style="font-size: 1.2rem;">{detail['icon']}</div>
+                           <div style="font-weight: bold;">{detail['param']}</div>
+                           <div style="color: {color};">{detail['value']} {detail['unit']}</div>
+                           <div style="color: {color}; font-size: 0.9rem;">{status_text}</div>
+                       </div>
+                       """, unsafe_allow_html=True)
+           
+           elif alert['type'] == 'maintenance':
+               st.markdown("**Mantenimientos vencidos:**")
+               for detail in alert['details']:
+                   col1, col2 = st.columns([3, 1])
+                   with col1:
+                       st.write(f"• {detail['Tipo']} - {detail['Proximo_Mantenimiento'].strftime('%d/%m/%Y')}")
+                   with col2:
+                       # Botón para marcar como completado
+                       if st.button("✅ Completado", key=f"complete_{detail['Tipo']}_{detail['Proximo_Mantenimiento']}", 
+                                   help="Marcar este mantenimiento como completado"):
+                           # Encontrar el índice de esta fila en el DataFrame
+                           try:
+                               maint_df = get_maintenance_data(st.session_state.mant_sheet)
+                               matching_rows = maint_df[
+                                   (maint_df['Tipo'] == detail['Tipo']) & 
+                                   (maint_df['Proximo_Mantenimiento'] == detail['Proximo_Mantenimiento'])
+                               ]
+                               if not matching_rows.empty:
+                                   row_index = matching_rows.index[0]
+                                   if clear_maintenance_alert(st.session_state.mant_sheet, row_index):
+                                       st.success(f"✅ Alerta de {detail['Tipo']} marcada como completada")
+                                       st.rerun()  # Recargar la página para actualizar las alertas
+                                   else:
+                                       st.error("❌ Error al marcar como completado")
+                           except Exception as e:
+                               st.error(f"Error: {e}")
+   
+   # Alertas de prioridad media
+   for alert in medium_priority:
+       color = "#ffc107"  # Amarillo/Naranja
+       icon = "⚠️"
+       
+       st.markdown(f"""
+       <div style="background: linear-gradient(90deg, {color}15 0%, {color}05 100%); 
+                   border-left: 4px solid {color}; padding: 12px; margin: 8px 0; 
+                   border-radius: 8px;">
+           <div style="display: flex; align-items: center;">
+               <span style="font-size: 1.2rem; margin-right: 10px;">{icon}</span>
+               <div>
+                   <strong style="color: {color}; font-size: 1rem;">{alert['title']}</strong>
+                   <div style="color: #666; margin-top: 3px; font-size: 0.9rem;">{alert['message']}</div>
+               </div>
+           </div>
+       </div>
+       """, unsafe_allow_html=True)
+   
+   st.markdown("---")
 
 def normalize_decimal(value):
     """Convierte comas decimales en puntos para compatibilidad móvil"""
@@ -505,6 +544,10 @@ def main():
     if sheet is None or mant_sheet is None:
         st.error("⚠️ No se pudo conectar con Google Sheets. Verifica la configuración.")
         return
+
+    # Guardar en session_state para acceso global
+    st.session_state.mant_sheet = mant_sheet
+    
     
     # Sidebar mejorado
     with st.sidebar:
