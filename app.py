@@ -488,10 +488,9 @@ def display_alerts(alerts):
 def normalize_decimal(value):
     """Convierte comas decimales en puntos para compatibilidad móvil"""
     try:
-        # Convertir a string primero para manejar cualquier tipo
         value_str = str(value).replace(',', '.')
-        # Convertir a float y luego de vuelta a string para eliminar comas
-        return str(float(value_str))
+        # Redondear a 3 decimales máximo para evitar problemas de precisión
+        return str(round(float(value_str), 3))
     except (ValueError, TypeError):
         return "0.0"
 
@@ -653,17 +652,17 @@ def main():
                 fecha = st.date_input("Fecha", value=date.today())
                 hora = st.time_input("Hora", value=datetime.now().time())
                 
-                st.markdown("#### 🧪 Parámetros Químicos")
+                st.markdown("#### 🧪 Parámetros electroquímicos")
                 ph = st.number_input("pH", min_value=0.0, max_value=14.0, value=7.4, step=0.1)
-                fac = st.number_input("FAC (ppm)", min_value=0.0, max_value=10.0, value=0.5, step=0.1)
-                orp = st.number_input("ORP (mV)", min_value=0, value=700, step=10)
-                temperatura = st.number_input("Temperatura (°C)", min_value=0.0, max_value=50.0, value=25.0, step=0.5)
-            
-            with col2:
-                st.markdown("#### 💧 Salinidad y Conductividad")
-                sal = st.number_input("Sal (ppm)", min_value=0, value=3000, step=100)
                 conductividad = st.number_input("Conductividad (µS/cm)", min_value=0, value=6000, step=100)
                 tds = st.number_input("TDS (ppm)", min_value=0, value=3000, step=50)
+                sal = st.number_input("Sal (ppm)", min_value=0, value=3000, step=100)
+
+            with col2:
+                st.markdown("#### 🔋 Desinfección y Ambiente")
+                orp = st.number_input("ORP (mV)", min_value=0, value=700, step=10)
+                fac = st.number_input("FAC (ppm)", min_value=0.0, max_value=10.0, value=0.5, step=0.1)
+                temperatura = st.number_input("Temperatura (°C)", min_value=0.0, max_value=50.0, value=25.0, step=0.5)
         
         # Vista previa del estado
         st.markdown("### 🚦 Vista Previa del Estado")
@@ -710,13 +709,13 @@ def main():
             if st.button("💾 Guardar Medición", type="primary", use_container_width=True):
                 # Normalizar decimales (convertir comas en puntos)
                 try:
-                    ph_norm = str(float(str(ph).replace(',', '.')))
-                    conductividad_norm = str(float(str(conductividad).replace(',', '.')))
-                    tds_norm = str(float(str(tds).replace(',', '.')))
-                    sal_norm = str(float(str(sal).replace(',', '.')))
-                    orp_norm = str(float(str(orp).replace(',', '.')))
-                    fac_norm = str(float(str(fac).replace(',', '.')))
-                    temperatura_norm = str(float(str(temperatura).replace(',', '.')))
+                    ph_norm = str(round(float(str(ph).replace(',', '.')), 2))
+                    conductividad_norm = str(round(float(str(conductividad).replace(',', '.')), 0))
+                    tds_norm = str(round(float(str(tds).replace(',', '.')), 0))
+                    sal_norm = str(round(float(str(sal).replace(',', '.')), 0))
+                    orp_norm = str(round(float(str(orp).replace(',', '.')), 0))
+                    fac_norm = str(round(float(str(fac).replace(',', '.')), 2))
+                    temperatura_norm = str(round(float(str(temperatura).replace(',', '.')), 1))
                     
                     data_row = [
                         fecha.strftime('%Y-%m-%d'),
