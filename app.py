@@ -186,7 +186,7 @@ RANGES = {
     'Sal': {'min': 2700, 'max': 4500, 'unit': 'ppm', 'icon': '🧂'},
     'ORP': {'min': 650, 'max': 750, 'unit': 'mV', 'icon': '🔋'},
     'FAC': {'min': 1.0, 'max': 3.0, 'unit': 'ppm', 'icon': '🟢'},
-    'Temperatura': {'min': 22, 'max': 28, 'unit': '°C', 'icon': '🌡️'}
+    'Temperatura': {'min': 22, 'max': 32, 'unit': '°C', 'icon': '🌡️'}
 }
 
 def check_parameter_status(value, param):
