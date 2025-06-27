@@ -652,17 +652,17 @@ def main():
                 fecha = st.date_input("Fecha", value=date.today())
                 hora = st.time_input("Hora", value=datetime.now().time())
                 
-                st.markdown("#### 🧪 Parámetros Químicos")
+                st.markdown("#### 🧪 Parámetros electroquímicos")
                 ph = st.number_input("pH", min_value=0.0, max_value=14.0, value=7.4, step=0.1)
-                fac = st.number_input("FAC (ppm)", min_value=0.0, max_value=10.0, value=0.5, step=0.1)
-                orp = st.number_input("ORP (mV)", min_value=0, value=700, step=10)
-                temperatura = st.number_input("Temperatura (°C)", min_value=0.0, max_value=50.0, value=25.0, step=0.5)
-            
-            with col2:
-                st.markdown("#### 💧 Salinidad y Conductividad")
-                sal = st.number_input("Sal (ppm)", min_value=0, value=3000, step=100)
                 conductividad = st.number_input("Conductividad (µS/cm)", min_value=0, value=6000, step=100)
                 tds = st.number_input("TDS (ppm)", min_value=0, value=3000, step=50)
+                sal = st.number_input("Sal (ppm)", min_value=0, value=3000, step=100)
+
+            with col2:
+                st.markdown("#### 🔋 Desinfección y Ambiente")
+                orp = st.number_input("ORP (mV)", min_value=0, value=700, step=10)
+                fac = st.number_input("FAC (ppm)", min_value=0.0, max_value=10.0, value=0.5, step=0.1)
+                temperatura = st.number_input("Temperatura (°C)", min_value=0.0, max_value=50.0, value=25.0, step=0.5)
         
         # Vista previa del estado
         st.markdown("### 🚦 Vista Previa del Estado")
@@ -912,10 +912,11 @@ def main():
             with col1:
                 fecha_mant = st.date_input("📅 Fecha", value=date.today(), key="mant_fecha")
                 tipo_mant = st.selectbox("🔧 Tipo de Mantenimiento", [
-                    "Limpieza filtro bolas",
-                    "Cambio filtro bolas", 
-                    "Limpieza skimmers",
                     "Aspirado fondo",
+                    "Limpieza filtro",
+                    "Adición de químicos",
+                    "Cambio filtro", 
+                    "Limpieza skimmers",
                     "Limpieza paredes",
                     "Calibración sondas",
                     "Revisión célula sal",
@@ -933,7 +934,7 @@ def main():
                     tipo_final = tipo_mant
                     
                 estado_antes = st.selectbox("Estado antes", ["Bueno", "Regular", "Malo", "Crítico"])
-                tiempo_empleado = st.number_input("⏱️ Tiempo empleado (minutos)", min_value=0, value=30, step=5)
+                tiempo_empleado = st.number_input("⏱️ Tiempo empleado (minutos)", min_value=0, value=5, step=5)
             
             # Notas y observaciones
             notas = st.text_area("📝 Notas y observaciones", 
@@ -950,12 +951,13 @@ def main():
                 if programar_siguiente:
                     # Sugerencias automáticas según tipo
                     sugerencias_dias = {
-                        "Limpieza filtro bolas": 7,
-                        "Cambio filtro bolas": 30,
+                        "Limpieza filtro": 5,
+                        "Adición de químicos": 3,                        
                         "Limpieza skimmers": 3,
-                        "Aspirado fondo": 7,
-                        "Calibración sondas": 15,
-                        "Revisión célula sal": 30
+                        "Aspirado fondo": 3,
+                        "Calibración sondas": 30,
+                        "Revisión célula sal": 30,
+                        "Cambio filtro": 365
                     }
                     dias_sugeridos = sugerencias_dias.get(tipo_final, 14)
                     fecha_siguiente = st.date_input("Próximo mantenimiento", 
@@ -1068,7 +1070,7 @@ def main():
             st.markdown("##### 🔍 Filtros")
             col1, col2, col3 = st.columns(3)
             with col1:
-                filtro_tipo = st.multiselect("Tipo:", ["Limpieza filtro bolas", "Cambio filtro bolas", "Aspirado fondo", "Calibración sondas", "Limpieza skimmers", "Limpieza paredes", "Revisión célula sal"])
+                filtro_tipo = st.multiselect("Tipo:", ["Limpieza filtro", "Adición de químicos", "Cambio filtro", "Aspirado fondo", "Calibración sondas", "Limpieza skimmers", "Limpieza paredes", "Revisión célula sal"])
             with col2:
                 desde = st.date_input("Desde:", value=date.today() - pd.Timedelta(days=30), key="mant_desde")
             with col3:
