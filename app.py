@@ -168,44 +168,6 @@ def get_maintenance_data(mant_sheet):
         st.error(f"Error obteniendo datos de mantenimiento: {e}")
         return pd.DataFrame()
 
-def clear_maintenance_alert_by_data(mant_sheet, tipo_mantenimiento, fecha_programada):
-    """
-    Borra la alerta de mantenimiento buscando por tipo y fecha exacta
-    """
-    try:
-        # Obtener todos los datos como lista de listas
-        all_data = mant_sheet.get_all_values()
-        
-        if not all_data or len(all_data) < 2:  # No hay datos o solo header
-            return False
-        
-        # Convertir fecha a string en formato que esperamos en Google Sheets
-        fecha_buscar = fecha_programada.strftime('%Y-%m-%d')
-        
-        # Buscar la fila que coincida
-        for row_num, row_data in enumerate(all_data):
-            if row_num == 0:  # Saltar header
-                continue
-                
-            # Verificar que la fila tenga suficientes columnas
-            if len(row_data) >= 6:
-                # Columna 1 = Tipo (índice 1), Columna 5 = Proximo_Mantenimiento (índice 5)
-                if (row_data[1] == tipo_mantenimiento and 
-                    row_data[5] == fecha_buscar):
-                    
-                    # Encontramos la fila, limpiar la columna F (Proximo_Mantenimiento)
-                    # row_num + 1 porque Google Sheets usa índice base-1
-                    cell_address = f"F{row_num + 1}"
-                    mant_sheet.update(cell_address, "")
-                    
-                    return True
-        
-        return False
-        
-    except Exception as e:
-        st.error(f"Error borrando alerta: {e}")
-        return False
-
 def add_maintenance_to_sheets(mant_sheet, data):
     """Añade una nueva fila de mantenimiento a Google Sheets"""
     try:
@@ -337,6 +299,7 @@ def create_enhanced_chart(df, param_seleccionado):
     )
     
     return fig
+
 
 def get_chart_range(param):
     """Define rangos personalizados para cada parámetro en los gráficos"""
@@ -535,10 +498,6 @@ def main():
     # Título principal mejorado
     st.markdown('<h1 class="main-title">🏊‍♂️ Control de Piscina</h1>', 
                 unsafe_allow_html=True)
-                
-    # Inicializar confirmaciones de borrado
-    if 'confirm_delete' not in st.session_state:
-        st.session_state.confirm_delete = {}
     
     # Inicializar Google Sheets
     sheet, mant_sheet = init_google_sheets()
@@ -693,17 +652,17 @@ def main():
                 fecha = st.date_input("Fecha", value=date.today())
                 hora = st.time_input("Hora", value=datetime.now().time())
                 
-                st.markdown("#### 🧪 Parámetros electroquímicos")
+                st.markdown("#### 🧪 Parámetros Químicos")
                 ph = st.number_input("pH", min_value=0.0, max_value=14.0, value=7.4, step=0.1)
+                fac = st.number_input("FAC (ppm)", min_value=0.0, max_value=10.0, value=0.5, step=0.1)
+                orp = st.number_input("ORP (mV)", min_value=0, value=700, step=10)
+                temperatura = st.number_input("Temperatura (°C)", min_value=0.0, max_value=50.0, value=25.0, step=0.5)
+            
+            with col2:
+                st.markdown("#### 💧 Salinidad y Conductividad")
+                sal = st.number_input("Sal (ppm)", min_value=0, value=3000, step=100)
                 conductividad = st.number_input("Conductividad (µS/cm)", min_value=0, value=6000, step=100)
                 tds = st.number_input("TDS (ppm)", min_value=0, value=3000, step=50)
-                sal = st.number_input("Sal (ppm)", min_value=0, value=3000, step=100)
-
-            with col2:
-                st.markdown("#### 🔋 Desinfección y Ambiente")
-                orp = st.number_input("ORP (mV)", min_value=0, value=700, step=10)
-                fac = st.number_input("FAC (ppm)", min_value=0.0, max_value=10.0, value=0.5, step=0.1)
-                temperatura = st.number_input("Temperatura (°C)", min_value=0.0, max_value=50.0, value=25.0, step=0.5)
         
         # Vista previa del estado
         st.markdown("### 🚦 Vista Previa del Estado")
@@ -953,11 +912,10 @@ def main():
             with col1:
                 fecha_mant = st.date_input("📅 Fecha", value=date.today(), key="mant_fecha")
                 tipo_mant = st.selectbox("🔧 Tipo de Mantenimiento", [
-                    "Aspirado fondo",
-                    "Limpieza filtro",
-                    "Adición de químicos",
-                    "Cambio filtro", 
+                    "Limpieza filtro bolas",
+                    "Cambio filtro bolas", 
                     "Limpieza skimmers",
+                    "Aspirado fondo",
                     "Limpieza paredes",
                     "Calibración sondas",
                     "Revisión célula sal",
@@ -975,7 +933,7 @@ def main():
                     tipo_final = tipo_mant
                     
                 estado_antes = st.selectbox("Estado antes", ["Bueno", "Regular", "Malo", "Crítico"])
-                tiempo_empleado = st.number_input("⏱️ Tiempo empleado (minutos)", min_value=0, value=5, step=5)
+                tiempo_empleado = st.number_input("⏱️ Tiempo empleado (minutos)", min_value=0, value=30, step=5)
             
             # Notas y observaciones
             notas = st.text_area("📝 Notas y observaciones", 
@@ -992,13 +950,12 @@ def main():
                 if programar_siguiente:
                     # Sugerencias automáticas según tipo
                     sugerencias_dias = {
-                        "Limpieza filtro": 5,
-                        "Adición de químicos": 3,                        
+                        "Limpieza filtro bolas": 7,
+                        "Cambio filtro bolas": 30,
                         "Limpieza skimmers": 3,
-                        "Aspirado fondo": 3,
-                        "Calibración sondas": 30,
-                        "Revisión célula sal": 30,
-                        "Cambio filtro": 365
+                        "Aspirado fondo": 7,
+                        "Calibración sondas": 15,
+                        "Revisión célula sal": 30
                     }
                     dias_sugeridos = sugerencias_dias.get(tipo_final, 14)
                     fecha_siguiente = st.date_input("Próximo mantenimiento", 
@@ -1057,11 +1014,14 @@ def main():
                         next_maint_by_type = future_maint.groupby('Tipo')['Proximo_Mantenimiento'].min().reset_index()
                         next_maint_by_type = next_maint_by_type.sort_values('Proximo_Mantenimiento')
                         
-                        # Mostrar en tarjetas con botones de borrar
+                        # Mostrar en tarjetas
+                        if len(next_maint_by_type) <= 3:
+                            cols = st.columns(len(next_maint_by_type))
+                        else:
+                            cols = st.columns(3)
+                        
                         for i, (_, maint) in enumerate(next_maint_by_type.iterrows()):
-                            col1, col2 = st.columns([5, 1])
-                            
-                            with col1:
+                            with cols[i % 3]:
                                 days_until = (maint['Proximo_Mantenimiento'].date() - pd.Timestamp.now().date()).days
                                 
                                 # Color según proximidad
@@ -1091,43 +1051,6 @@ def main():
                                     </div>
                                 </div>
                                 """, unsafe_allow_html=True)
-                            
-                            with col2:
-                                # Clave única para este mantenimiento
-                                delete_key = f"{maint['Tipo']}_{maint['Proximo_Mantenimiento'].strftime('%Y%m%d')}"
-                                
-                                # Verificar si está en modo confirmación
-                                if st.session_state.confirm_delete.get(delete_key, False):
-                                    st.markdown("**¿Confirmar?**")
-                                    col_si, col_no = st.columns(2)
-                                    
-                                    with col_si:
-                                        if st.button("✅", key=f"confirm_yes_{delete_key}", help="Confirmar borrado"):
-                                            if clear_maintenance_alert_by_data(
-                                                mant_sheet, 
-                                                maint['Tipo'], 
-                                                maint['Proximo_Mantenimiento']
-                                            ):
-                                                st.success(f"✅ Recordatorio '{maint['Tipo']}' eliminado")
-                                                st.session_state.confirm_delete[delete_key] = False
-                                                st.rerun()
-                                            else:
-                                                st.error("❌ Error al eliminar")
-                                                st.session_state.confirm_delete[delete_key] = False
-                                    
-                                    with col_no:
-                                        if st.button("❌", key=f"confirm_no_{delete_key}", help="Cancelar"):
-                                            st.session_state.confirm_delete[delete_key] = False
-                                            st.rerun()
-                                
-                                else:
-                                    # Botón inicial de borrar
-                                    if st.button("🗑️", 
-                                               key=f"delete_{delete_key}", 
-                                               help=f"Eliminar recordatorio: {maint['Tipo']}",
-                                               type="secondary"):
-                                        st.session_state.confirm_delete[delete_key] = True
-                                        st.rerun()
                     else:
                         st.info("📅 No hay mantenimientos programados próximamente.")
                 else:
@@ -1145,7 +1068,7 @@ def main():
             st.markdown("##### 🔍 Filtros")
             col1, col2, col3 = st.columns(3)
             with col1:
-                filtro_tipo = st.multiselect("Tipo:", ["Limpieza filtro", "Adición de químicos", "Cambio filtro", "Aspirado fondo", "Calibración sondas", "Limpieza skimmers", "Limpieza paredes", "Revisión célula sal"])
+                filtro_tipo = st.multiselect("Tipo:", ["Limpieza filtro bolas", "Cambio filtro bolas", "Aspirado fondo", "Calibración sondas", "Limpieza skimmers", "Limpieza paredes", "Revisión célula sal"])
             with col2:
                 desde = st.date_input("Desde:", value=date.today() - pd.Timedelta(days=30), key="mant_desde")
             with col3:
@@ -1171,105 +1094,6 @@ def main():
                         df_display['Proximo_Mantenimiento'] = df_display['Proximo_Mantenimiento'].dt.strftime('%d/%m/%Y')
                     
                     st.dataframe(df_display, use_container_width=True)
-                    # NUEVA SECCIÓN: Gestionar Recordatorios Programados
-                    st.markdown("---")
-                    st.markdown("##### 🗂️ Gestionar Recordatorios Programados")
-                    
-                    # Obtener mantenimientos con recordatorios activos
-                    scheduled_maintenance = df_mant[
-                        df_mant['Proximo_Mantenimiento'].notna()
-                    ].copy()
-                    
-                    if not scheduled_maintenance.empty:
-                        st.markdown("**Recordatorios activos de mantenimiento:**")
-                        st.markdown("*Haz clic en 🗑️ para eliminar un recordatorio (requiere confirmación)*")
-                        
-                        # Ordenar por fecha de próximo mantenimiento
-                        scheduled_maintenance = scheduled_maintenance.sort_values('Proximo_Mantenimiento')
-                        
-                        # Mostrar cada recordatorio con opción de borrar
-                        for _, maintenance_row in scheduled_maintenance.iterrows():
-                            col1, col2, col3, col4 = st.columns([3, 2, 2, 1])
-                            
-                            days_until = (maintenance_row['Proximo_Mantenimiento'].date() - pd.Timestamp.now().date()).days
-                            
-                            # Determinar estado y color
-                            if days_until < 0:
-                                status = "🔴 VENCIDO"
-                                status_color = "#dc3545"
-                            elif days_until <= 2:
-                                status = "🟠 URGENTE"
-                                status_color = "#fd7e14"
-                            elif days_until <= 7:
-                                status = "🟡 PRÓXIMO"
-                                status_color = "#ffc107"
-                            else:
-                                status = "🟢 PROGRAMADO"
-                                status_color = "#28a745"
-                            
-                            with col1:
-                                st.markdown(f"""
-                                <div style="padding: 10px; border-left: 3px solid {status_color}; 
-                                           background: rgba(255,255,255,0.05); border-radius: 5px;">
-                                    <strong>{maintenance_row['Tipo']}</strong><br>
-                                    <small>Último: {maintenance_row['Fecha'].strftime('%d/%m/%Y')}</small>
-                                </div>
-                                """, unsafe_allow_html=True)
-                            
-                            with col2:
-                                st.markdown(f"""
-                                <div style="text-align: center; padding: 10px;">
-                                    <strong>📅 {maintenance_row['Proximo_Mantenimiento'].strftime('%d/%m/%Y')}</strong>
-                                </div>
-                                """, unsafe_allow_html=True)
-                            
-                            with col3:
-                                st.markdown(f"""
-                                <div style="text-align: center; padding: 10px;">
-                                    <span style="color: {status_color}; font-weight: bold;">{status}</span><br>
-                                    <small>{abs(days_until)} día{'s' if abs(days_until) != 1 else ''}</small>
-                                </div>
-                                """, unsafe_allow_html=True)
-                            
-                            with col4:
-                                # Clave única para este mantenimiento
-                                hist_delete_key = f"hist_{maintenance_row['Tipo']}_{maintenance_row['Proximo_Mantenimiento'].strftime('%Y%m%d')}"
-                                
-                                # Verificar si está en modo confirmación
-                                if st.session_state.confirm_delete.get(hist_delete_key, False):
-                                    col_si, col_no = st.columns(2)
-                                    
-                                    with col_si:
-                                        if st.button("✅", key=f"hist_confirm_yes_{hist_delete_key}", help="Confirmar"):
-                                            if clear_maintenance_alert_by_data(
-                                                mant_sheet, 
-                                                maintenance_row['Tipo'], 
-                                                maintenance_row['Proximo_Mantenimiento']
-                                            ):
-                                                st.success(f"✅ Recordatorio '{maintenance_row['Tipo']}' eliminado")
-                                                st.session_state.confirm_delete[hist_delete_key] = False
-                                                st.rerun()
-                                            else:
-                                                st.error("❌ Error al eliminar")
-                                                st.session_state.confirm_delete[hist_delete_key] = False
-                                    
-                                    with col_no:
-                                        if st.button("❌", key=f"hist_confirm_no_{hist_delete_key}", help="Cancelar"):
-                                            st.session_state.confirm_delete[hist_delete_key] = False
-                                            st.rerun()
-                                
-                                else:
-                                    # Botón inicial de borrar
-                                    if st.button("🗑️", 
-                                               key=f"hist_delete_{hist_delete_key}", 
-                                               help=f"Eliminar recordatorio: {maintenance_row['Tipo']}",
-                                               type="secondary"):
-                                        st.session_state.confirm_delete[hist_delete_key] = True
-                                        st.rerun()
-                            
-                            st.markdown("---")
-                    else:
-                        st.info("📅 No hay recordatorios programados actualmente.")
                 else:
                     st.info("📊 No hay registros que coincidan con los filtros.")
             else:
