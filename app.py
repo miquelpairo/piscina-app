@@ -15,6 +15,19 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# PASO 2: Configuración PWA (VA DESPUÉS DEL set_page_config)
+st.markdown("""
+<head>
+    <link rel="apple-touch-icon" sizes="192x192" href="TU-URL-AQUI/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="TU-URL-AQUI/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="TU-URL-AQUI/icon-512x512.png">
+    <meta name="theme-color" content="#2980b9">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Pool Control">
+</head>
+""", unsafe_allow_html=True)
+
 # CSS personalizado para mejorar la apariencia
 st.markdown("""
 <style>
