@@ -1648,7 +1648,7 @@ def main():
         pool_info = get_pool_info(info_sheet)
         
         # Tabs para organizar la información
-        info_tabs = st.tabs(["📏 Dimensiones", "⚙️ Equipamiento", "📋 General"], "🧪 Químicos")
+        info_tabs = st.tabs(["📏 Dimensiones", "⚙️ Equipamiento", "📋 General", "🧪 Químicos"])
         
         # ==================== TAB 1: DIMENSIONES ====================
         with info_tabs[0]:
