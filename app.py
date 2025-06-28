@@ -1748,11 +1748,12 @@ def main():
                         placeholder="Ej: Hayward Super Pump 1.5 HP"
                     )
                     
+                    filtro_opciones = ["", "Arena", "Cartucho", "Diatomea", "Vidrio", "Otro"]
                     filtro_tipo = st.selectbox(
                         "Tipo de filtro",
-                        ["", "Arena", "Cartucho", "Diatomea", "Vidrio", "Otro"],
+                        filtro_opciones,
                         index=0 if not pool_info.get('Filtro_Tipo', {}).get('valor') else 
-                              ["", "Arena", "Cartucho", "Diatomea", "Vidrio", "Otro"].index(pool_info.get('Filtro_Tipo', {}).get('valor')) if pool_info.get('Filtro_Tipo', {}).get('valor') in ["", "Arena", "Cartucho", "Diatomea", "Otro"] else 0
+                              filtro_opciones.index(pool_info.get('Filtro_Tipo', {}).get('valor')) if pool_info.get('Filtro_Tipo', {}).get('valor') in filtro_opciones else 0
                     )
                     
                     clorador_modelo = st.text_input(
