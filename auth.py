@@ -42,11 +42,13 @@ def get_logged_user_email():
     # Obtener info del usuario
     session = OAuth2Session(client_id, token=token)
     resp = session.get(userinfo_url)
+    st.write("🔍 userinfo raw:", resp.status_code, resp.text)
     user_info = resp.json()
 
     # DEBUG opcional
     st.write("User Info:", user_info)
     st.write("🔍 Google responde:", user_info)
+    
 
 
     email = user_info.get("email")
