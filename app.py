@@ -7,7 +7,6 @@ from datetime import datetime, date, time
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-# Configuración de la página con tema oscuro
 st.set_page_config(
     page_title="🏊‍♂️ Control Piscina de Sal",
     page_icon="🏊‍♂️",
