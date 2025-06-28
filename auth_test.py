@@ -35,6 +35,8 @@ def main():
 
     session = OAuth2Session(client_id, token=token)
     resp = session.get(userinfo_url)
+    st.write("🔐 Scopes del token:", token.get("scope"))
+
 
     if resp.status_code != 200:
         st.error("❌ Error al obtener información del usuario.")
