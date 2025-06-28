@@ -78,7 +78,7 @@ def check_google_auth():
         return True
     
     # Verificar si hay un código en la URL (callback de Google)
-    query_params = st.experimental_get_query_params()
+    query_params = st.query_params
     
     if 'code' in query_params:
         code = query_params['code'][0]
@@ -99,7 +99,7 @@ def check_google_auth():
                     st.session_state.user_picture = user_info.get('picture', '')
                     
                     # Limpiar parámetros de URL
-                    st.experimental_set_query_params()
+                    st.query_params.clear()
                     
                     st.success(f"✅ ¡Bienvenido {st.session_state.user_name}!")
                     st.rerun()
