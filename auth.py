@@ -7,9 +7,9 @@ def get_logged_user_email():
     Guarda el token y el email en session_state.
     """
 
-    client_id = st.secrets["oauth"]["client_id"]
-    client_secret = st.secrets["oauth"]["client_secret"]
-    redirect_uri = st.secrets["oauth"]["redirect_uri"]
+    client_id = st.secrets["google_oauth"]["client_id"]
+    client_secret = st.secrets["google_oauth"]["client_secret"]
+    redirect_uri = st.secrets["google_oauth"]["redirect_uri"]
     scope = "openid email profile"
 
     # URL de autorización y token de Google
