@@ -1,5 +1,6 @@
 import streamlit as st
 from authlib.integrations.requests_client import OAuth2Session
+import urllib.parse
 
 def main():
     st.title("🔐 Prueba de autenticación con Google")
@@ -8,6 +9,7 @@ def main():
     client_secret = st.secrets["google_oauth"]["client_secret"]
     redirect_uri = st.secrets["google_oauth"]["redirect_uri"]
     scope = ["openid", "email", "profile"]
+    scope_str = urllib.parse.quote_plus(" ".join(scope))
 
     authorize_url = "https://accounts.google.com/o/oauth2/auth"
     token_url = "https://oauth2.googleapis.com/token"
@@ -22,7 +24,7 @@ def main():
             f"{authorize_url}?response_type=code"
             f"&client_id={client_id}"
             f"&redirect_uri={redirect_uri}"
-            f"&scope={' '.join(scope)}"
+            f"&scope={scope_str}"
             f"&access_type=offline"
             f"&prompt=consent"
         )
