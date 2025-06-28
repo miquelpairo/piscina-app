@@ -577,6 +577,74 @@ def normalize_decimal(value):
     except (ValueError, TypeError):
         return "0.0"
 
+# ============================================================================
+# 🏊‍♂️ FUNCIONES PARA INFORMACIÓN DE PISCINA
+# ============================================================================
+
+def get_pool_info(info_sheet):
+    """Obtiene la información de la piscina desde Google Sheets"""
+    try:
+        if info_sheet is None:
+            return {}
+            
+        data = info_sheet.get_all_records()
+        if data:
+            # Convertir lista de diccionarios a diccionario simple
+            pool_info = {}
+            for row in data:
+                if row.get('Campo') and row.get('Campo') != '':
+                    pool_info[row['Campo']] = {
+                        'valor': row.get('Valor', ''),
+                        'notas': row.get('Notas', '')
+                    }
+            return pool_info
+        else:
+            return {}
+    except Exception as e:
+        st.error(f"Error obteniendo información de piscina: {e}")
+        return {}
+
+def update_pool_info(info_sheet, campo, valor, notas=""):
+    """Actualiza un campo específico de información de la piscina"""
+    try:
+        if info_sheet is None:
+            return False
+            
+        # Obtener todos los datos
+        all_data = info_sheet.get_all_values()
+        
+        # Buscar la fila del campo
+        for row_num, row_data in enumerate(all_data):
+            if len(row_data) > 0 and row_data[0] == campo:
+                # Actualizar la fila (row_num + 1 porque Google Sheets usa índice base-1)
+                info_sheet.update_cell(row_num + 1, 2, str(valor))  # Columna B = Valor
+                if notas:
+                    info_sheet.update_cell(row_num + 1, 3, str(notas))  # Columna C = Notas
+                return True
+        
+        # Si no existe el campo, añadirlo
+        info_sheet.append_row([campo, str(valor), str(notas)])
+        return True
+        
+    except Exception as e:
+        st.error(f"Error actualizando información: {e}")
+        return False
+
+def calculate_pool_volume(largo, ancho, prof_promedio):
+    """Calcula el volumen de la piscina en litros"""
+    try:
+        largo_f = float(str(largo).replace(',', '.'))
+        ancho_f = float(str(ancho).replace(',', '.'))
+        prof_f = float(str(prof_promedio).replace(',', '.'))
+        
+        # Volumen en metros cúbicos * 1000 = litros
+        volumen_m3 = largo_f * ancho_f * prof_f
+        volumen_litros = volumen_m3 * 1000
+        
+        return round(volumen_litros, 0)
+    except:
+        return 0
+
 def main():
     # Título principal mejorado
     st.markdown('<h1 class="main-title">🏊‍♂️ Control de Piscina</h1>', 
@@ -1318,18 +1386,220 @@ def main():
                 st.info("📊 No hay registros de mantenimiento aún.")
             
     elif tab == "🏊‍♂️ Info Piscina":
-        if info_sheet is None:
-            st.warning("⚠️ La hoja de información no está disponible. Creando...")
-            st.button("🔄 Reintentar crear hoja", on_click=st.cache_resource.clear)
-        else:
-            st.markdown("### 🏊‍♂️ Información de la Piscina")
-            st.success("✅ Hoja Info_Piscina disponible")
+        st.markdown("### 🏊‍♂️ Información de la Piscina")
         
-        # Mostrar datos actuales
-        st.markdown("#### 📋 Datos actuales")
-        st.write("Volumen: Por definir")
-        st.write("Dimensiones: Por definir") 
-        st.write("Equipamiento: Por definir")
+        if info_sheet is None:
+            st.warning("⚠️ La hoja de información no está disponible.")
+            if st.button("🔄 Reintentar crear hoja", type="primary"):
+                st.cache_resource.clear()
+                st.rerun()
+            return
+        
+        # Obtener información actual
+        pool_info = get_pool_info(info_sheet)
+        
+        # Tabs para organizar la información
+        info_tabs = st.tabs(["📏 Dimensiones", "⚙️ Equipamiento", "📋 General"])
+        
+        # ==================== TAB 1: DIMENSIONES ====================
+        with info_tabs[0]:
+            st.markdown("#### 📏 Dimensiones y Volumen")
+            
+            with st.form("dimensiones_form"):
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    largo = st.number_input(
+                        "Largo (metros)", 
+                        min_value=0.0, 
+                        value=float(pool_info.get('Largo_Metros', {}).get('valor', 0)),
+                        step=0.1,
+                        help="Largo de la piscina en metros"
+                    )
+                    
+                    ancho = st.number_input(
+                        "Ancho (metros)", 
+                        min_value=0.0, 
+                        value=float(pool_info.get('Ancho_Metros', {}).get('valor', 0)),
+                        step=0.1,
+                        help="Ancho de la piscina en metros"
+                    )
+                    
+                    profundidad = st.number_input(
+                        "Profundidad promedio (metros)", 
+                        min_value=0.0, 
+                        value=float(pool_info.get('Profundidad_Metros', {}).get('valor', 0)),
+                        step=0.1,
+                        help="Profundidad promedio de la piscina"
+                    )
+                
+                with col2:
+                    # Calcular volumen automáticamente
+                    volumen_calculado = calculate_pool_volume(largo, ancho, profundidad)
+                    
+                    st.markdown("**📊 Información calculada:**")
+                    st.info(f"🌊 **Volumen total:** {volumen_calculado:,.0f} litros")
+                    
+                    if largo > 0 and ancho > 0:
+                        superficie = largo * ancho
+                        st.info(f"📐 **Superficie:** {superficie:.1f} m²")
+                    
+                    if volumen_calculado > 0:
+                        st.info(f"💧 **Renovación 8h:** {volumen_calculado/8:,.0f} L/h")
+                
+                # Ubicación
+                ubicacion = st.text_input(
+                    "📍 Ubicación", 
+                    value=pool_info.get('Ubicacion', {}).get('valor', ''),
+                    placeholder="Ej: Jardín trasero, Terraza, etc."
+                )
+                
+                fecha_instalacion = st.date_input(
+                    "📅 Fecha de instalación",
+                    value=pd.to_datetime(pool_info.get('Fecha_Instalacion', {}).get('valor', '2020-01-01'), errors='coerce').date() if pool_info.get('Fecha_Instalacion', {}).get('valor') else None,
+                    help="Fecha de instalación de la piscina"
+                )
+                
+                if st.form_submit_button("💾 Guardar Dimensiones", type="primary"):
+                    # Guardar todos los campos
+                    success_count = 0
+                    
+                    if update_pool_info(info_sheet, "Largo_Metros", largo, "Largo en metros"):
+                        success_count += 1
+                    if update_pool_info(info_sheet, "Ancho_Metros", ancho, "Ancho en metros"):
+                        success_count += 1
+                    if update_pool_info(info_sheet, "Profundidad_Metros", profundidad, "Profundidad promedio"):
+                        success_count += 1
+                    if update_pool_info(info_sheet, "Volumen_Litros", volumen_calculado, "Volumen total calculado"):
+                        success_count += 1
+                    if update_pool_info(info_sheet, "Ubicacion", ubicacion, "Ubicación de la piscina"):
+                        success_count += 1
+                    if fecha_instalacion and update_pool_info(info_sheet, "Fecha_Instalacion", fecha_instalacion.strftime('%Y-%m-%d'), "Fecha de instalación"):
+                        success_count += 1
+                    
+                    if success_count > 0:
+                        st.success(f"✅ Información guardada correctamente! ({success_count} campos)")
+                        st.balloons()
+                    else:
+                        st.error("❌ Error al guardar la información")
+        
+        # ==================== TAB 2: EQUIPAMIENTO ====================
+        with info_tabs[1]:
+            st.markdown("#### ⚙️ Equipamiento")
+            
+            with st.form("equipamiento_form"):
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("**💧 Sistema de Filtración**")
+                    
+                    bomba_modelo = st.text_input(
+                        "Bomba (modelo)", 
+                        value=pool_info.get('Bomba_Modelo', {}).get('valor', ''),
+                        placeholder="Ej: Hayward Super Pump 1.5 HP"
+                    )
+                    
+                    filtro_tipo = st.selectbox(
+                        "Tipo de filtro",
+                        ["", "Arena", "Cartucho", "Diatomea", "Otro"],
+                        index=0 if not pool_info.get('Filtro_Tipo', {}).get('valor') else 
+                              ["", "Arena", "Cartucho", "Diatomea", "Otro"].index(pool_info.get('Filtro_Tipo', {}).get('valor')) if pool_info.get('Filtro_Tipo', {}).get('valor') in ["", "Arena", "Cartucho", "Diatomea", "Otro"] else 0
+                    )
+                    
+                    clorador_modelo = st.text_input(
+                        "Clorador salino", 
+                        value=pool_info.get('Clorador_Modelo', {}).get('valor', ''),
+                        placeholder="Ej: Hayward AquaRite 25000L"
+                    )
+                
+                with col2:
+                    st.markdown("**⚡ Configuración Actual**")
+                    
+                    generador_porcentaje = st.slider(
+                        "% Generador salino",
+                        min_value=0,
+                        max_value=100,
+                        value=int(pool_info.get('Generador_Porcentaje', {}).get('valor', 50)),
+                        help="Porcentaje actual del generador de cloro"
+                    )
+                    
+                    st.markdown("**🔄 Horarios de funcionamiento**")
+                    # Estos podrían ser campos adicionales
+                    st.info("💡 Tip: Configura el generador al 60-80% en verano y 40-60% en invierno")
+                
+                if st.form_submit_button("💾 Guardar Equipamiento", type="primary"):
+                    success_count = 0
+                    
+                    if update_pool_info(info_sheet, "Bomba_Modelo", bomba_modelo, "Modelo de la bomba"):
+                        success_count += 1
+                    if update_pool_info(info_sheet, "Filtro_Tipo", filtro_tipo, "Tipo de filtro"):
+                        success_count += 1
+                    if update_pool_info(info_sheet, "Clorador_Modelo", clorador_modelo, "Modelo clorador salino"):
+                        success_count += 1
+                    if update_pool_info(info_sheet, "Generador_Porcentaje", generador_porcentaje, "% actual del generador"):
+                        success_count += 1
+                    
+                    if success_count > 0:
+                        st.success(f"✅ Equipamiento guardado correctamente! ({success_count} campos)")
+                    else:
+                        st.error("❌ Error al guardar el equipamiento")
+        
+        # ==================== TAB 3: GENERAL ====================
+        with info_tabs[2]:
+            st.markdown("#### 📋 Información General")
+            
+            with st.form("general_form"):
+                notas_generales = st.text_area(
+                    "📝 Notas importantes",
+                    value=pool_info.get('Notas_Generales', {}).get('valor', ''),
+                    placeholder="Ej: Cambiar filtro cada 6 meses, revisar junta bomba, célula sal garantía hasta 2025...",
+                    height=100
+                )
+                
+                if st.form_submit_button("💾 Guardar Notas", type="primary"):
+                    if update_pool_info(info_sheet, "Notas_Generales", notas_generales, "Notas importantes"):
+                        st.success("✅ Notas guardadas correctamente!")
+                    else:
+                        st.error("❌ Error al guardar las notas")
+            
+            # Resumen de información
+            st.markdown("---")
+            st.markdown("#### 📊 Resumen de tu Piscina")
+            
+            if pool_info:
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    volumen = pool_info.get('Volumen_Litros', {}).get('valor', '0')
+                    st.metric("🌊 Volumen", f"{volumen} L" if volumen != '0' else "No definido")
+                    
+                    ubicacion_resumen = pool_info.get('Ubicacion', {}).get('valor', 'No definida')
+                    st.metric("📍 Ubicación", ubicacion_resumen)
+                
+                with col2:
+                    bomba = pool_info.get('Bomba_Modelo', {}).get('valor', 'No definida')
+                    st.metric("💧 Bomba", bomba[:20] + "..." if len(bomba) > 20 else bomba)
+                    
+                    filtro = pool_info.get('Filtro_Tipo', {}).get('valor', 'No definido')
+                    st.metric("🔄 Filtro", filtro)
+                
+                with col3:
+                    generador = pool_info.get('Generador_Porcentaje', {}).get('valor', '0')
+                    st.metric("⚡ Generador", f"{generador}%")
+                    
+                    fecha_inst = pool_info.get('Fecha_Instalacion', {}).get('valor', '')
+                    if fecha_inst:
+                        try:
+                            fecha_obj = pd.to_datetime(fecha_inst)
+                            años = (pd.Timestamp.now() - fecha_obj).days // 365
+                            st.metric("📅 Antigüedad", f"{años} años")
+                        except:
+                            st.metric("📅 Instalación", fecha_inst)
+                    else:
+                        st.metric("📅 Instalación", "No definida")
+            else:
+                st.info("📝 Completa la información de tu piscina en las pestañas superiores")
+
     
     
     elif tab == "ℹ️ Rangos Óptimos":
