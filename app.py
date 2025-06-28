@@ -677,7 +677,7 @@ def calculate_chemical_amounts(volumen_litros, chemical_type, current_value, tar
             'instructions': 'Diluir en un cubo de agua y verter lentamente en la piscina con la bomba funcionando. Esperar 2-4 horas antes de medir.'
         },
         'ph_plus': {
-            'ratio_per_1000L': 15,  # 15g de carbonato sódico por 1000L para subir 0.1 pH
+            'ratio_per_1000L': 5,  # 5g de Incrementador de pH granulado para subir 0.1 pH
             'unit': 'g',
             'param_change': 0.1,
             'instructions': 'Disolver completamente en agua tibia antes de añadir. Aplicar con bomba funcionando. Esperar 4-6 horas antes de medir.'
