@@ -100,10 +100,11 @@ def init_google_sheets():
         credentials = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         gc = gspread.authorize(credentials)
         
-        # Abrir el archivo y devolver ambas hojas
+        # Abrir el archivo y devolver las tres hojas
         spreadsheet = gc.open(st.secrets["sheet_name"])
         mediciones_sheet = spreadsheet.sheet1  # Hoja original
         
+        # Segunda hoja: Mantenimiento
         try:
             mantenimiento_sheet = spreadsheet.worksheet("Mantenimiento")
         except:
@@ -112,11 +113,31 @@ def init_google_sheets():
             # Añadir encabezados
             mantenimiento_sheet.append_row(["Fecha", "Tipo", "Estado_Antes", "Tiempo_Minutos", "Notas", "Proximo_Mantenimiento"])
         
-        return mediciones_sheet, mantenimiento_sheet
+        # Tercera hoja: Información de la piscina
+        try:
+            info_sheet = spreadsheet.worksheet("Info_Piscina")
+        except:
+            # Si no existe, crearla
+            info_sheet = spreadsheet.add_worksheet(title="Info_Piscina", rows="100", cols="3")
+            # Añadir datos iniciales
+            info_sheet.append_row(["Campo", "Valor", "Notas"])
+            info_sheet.append_row(["Volumen_Litros", "0", "Volumen total en litros"])
+            info_sheet.append_row(["Largo_Metros", "0", "Largo en metros"])
+            info_sheet.append_row(["Ancho_Metros", "0", "Ancho en metros"])
+            info_sheet.append_row(["Profundidad_Metros", "0", "Profundidad promedio"])
+            info_sheet.append_row(["Ubicacion", "", "Ubicación de la piscina"])
+            info_sheet.append_row(["Fecha_Instalacion", "", "Fecha de instalación"])
+            info_sheet.append_row(["Bomba_Modelo", "", "Modelo de la bomba"])
+            info_sheet.append_row(["Filtro_Tipo", "", "Tipo de filtro"])
+            info_sheet.append_row(["Clorador_Modelo", "", "Modelo clorador salino"])
+            info_sheet.append_row(["Generador_Porcentaje", "50", "% actual del generador"])
+            info_sheet.append_row(["Notas_Generales", "", "Notas importantes"])
+        
+        return mediciones_sheet, mantenimiento_sheet, info_sheet
         
     except Exception as e:
         st.error(f"Error conectando con Google Sheets: {e}")
-        return None, None
+        return None, None, None
 
 def get_data_from_sheets(sheet):
     """Obtiene los datos de Google Sheets"""
@@ -540,9 +561,9 @@ def main():
         st.session_state.confirm_delete = {}
     
     # Inicializar Google Sheets
-    sheet, mant_sheet = init_google_sheets()
+    sheet, mant_sheet, info_sheet = init_google_sheets()
 
-    if sheet is None or mant_sheet is None:
+    if sheet is None or mant_sheet is None or info_sheet is None:
         st.error("⚠️ No se pudo conectar con Google Sheets. Verifica la configuración.")
         return
     
@@ -551,7 +572,7 @@ def main():
         st.markdown("### 🎛️ Panel de Control")
         tab = st.radio("Navegación:", 
                       ["🏠 Dashboard", "📝 Nueva Medición", "📈 Gráficos", 
-                       "📋 Historial", "🔧 Mantenimiento", "ℹ️ Rangos Óptimos"],
+                       "📋 Historial", "🔧 Mantenimiento",  "🏊‍♂️ Info Piscina", "ℹ️ Rangos Óptimos"],
                       index=0)
         
     if tab == "🏠 Dashboard":
