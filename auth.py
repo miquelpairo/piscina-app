@@ -15,7 +15,6 @@ def get_logged_user_email():
 
     authorize_url = "https://accounts.google.com/o/oauth2/auth"
     token_url = "https://oauth2.googleapis.com/token"
-    userinfo_url = "https://openidconnect.googleapis.com/v1/userinfo"
 
     # Si ya está logueado
     if "user_email" in st.session_state:
@@ -46,10 +45,13 @@ def get_logged_user_email():
         st.stop()
 
     try:
+        st.write("🔍 id_token crudo:", id_token)
         payload_part = id_token.split('.')[1]
         padding = '=' * (-len(payload_part) % 4)
         decoded_bytes = base64.urlsafe_b64decode(payload_part + padding)
         claims = json.loads(decoded_bytes)
+        st.write("🔍 Payload decodificado:", claims)
+
         email = claims.get("email")
     except Exception as e:
         st.error(f"❌ Error al decodificar id_token: {e}")
