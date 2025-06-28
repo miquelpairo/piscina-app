@@ -195,8 +195,7 @@ def clear_maintenance_alert_by_data(mant_sheet, tipo_mantenimiento, fecha_progra
                     
                     # Encontramos la fila, limpiar la columna F (Proximo_Mantenimiento)
                     # row_num + 1 porque Google Sheets usa índice base-1
-                    cell_address = f"F{row_num + 1}"
-                    mant_sheet.update(cell_address, "")
+                    mant_sheet.update_cell(row_num + 1, 6, "")
                     
                     return True
         
