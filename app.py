@@ -645,6 +645,255 @@ def calculate_pool_volume(largo, ancho, prof_promedio):
     except:
         return 0
 
+# ============================================================================
+# 🧪 CALCULADORA DE QUÍMICOS
+# ============================================================================
+
+def calculate_chemical_amounts(volumen_litros, chemical_type, current_value, target_value):
+    """
+    Calcula la cantidad de químico necesaria según el volumen de la piscina
+    
+    Parámetros:
+    - volumen_litros: Volumen de la piscina en litros
+    - chemical_type: Tipo de químico ('ph_minus', 'ph_plus', 'sal', 'cloro_shock', etc.)
+    - current_value: Valor actual del parámetro
+    - target_value: Valor deseado del parámetro
+    
+    Retorna:
+    - cantidad: Cantidad necesaria del químico
+    - unidad: Unidad de medida
+    - instrucciones: Instrucciones de aplicación
+    """
+    
+    if volumen_litros <= 0:
+        return 0, "", "Primero define el volumen de tu piscina en la pestaña Dimensiones"
+    
+    # Ratios estándar por 1000 litros
+    chemical_ratios = {
+        'ph_minus': {
+            'ratio_per_1000L': 10,  # 10ml de ácido muriático por 1000L para bajar 0.1 pH
+            'unit': 'ml',
+            'param_change': 0.1,
+            'instructions': 'Diluir en un cubo de agua y verter lentamente en la piscina con la bomba funcionando. Esperar 2-4 horas antes de medir.'
+        },
+        'ph_plus': {
+            'ratio_per_1000L': 15,  # 15g de carbonato sódico por 1000L para subir 0.1 pH
+            'unit': 'g',
+            'param_change': 0.1,
+            'instructions': 'Disolver completamente en agua tibia antes de añadir. Aplicar con bomba funcionando. Esperar 4-6 horas antes de medir.'
+        },
+        'sal': {
+            'ratio_per_1000L': 1000,  # 1kg por 1000L para subir 1000ppm de sal
+            'unit': 'g',
+            'param_change': 1000,
+            'instructions': 'Añadir directamente en la piscina con bomba funcionando. La sal tardará 24-48h en disolverse completamente.'
+        },
+        'cloro_shock': {
+            'ratio_per_1000L': 15,  # 15g de cloro granulado por 1000L para shock (subir ~2ppm FAC)
+            'unit': 'g',
+            'param_change': 2.0,
+            'instructions': 'Disolver en cubo de agua. Aplicar al atardecer con bomba funcionando. No bañarse hasta que FAC baje a <3ppm.'
+        },
+        'alguicida': {
+            'ratio_per_1000L': 5,  # 5ml por 1000L para mantenimiento
+            'unit': 'ml',
+            'param_change': 1,  # Dosis de mantenimiento
+            'instructions': 'Aplicar directamente en la piscina. Para tratamiento intensivo, doblar la dosis.'
+        },
+        'clarificador': {
+            'ratio_per_1000L': 3,  # 3ml por 1000L
+            'unit': 'ml', 
+            'param_change': 1,
+            'instructions': 'Aplicar con bomba funcionando. Mantener filtración 24h seguidas. Aspirar precipitado después de 48h.'
+        }
+    }
+    
+    if chemical_type not in chemical_ratios:
+        return 0, "", "Tipo de químico no reconocido"
+    
+    ratio_info = chemical_ratios[chemical_type]
+    
+    # Calcular diferencia necesaria
+    if chemical_type == 'sal':
+        # Para sal, current_value y target_value son en ppm
+        difference = target_value - current_value
+        if difference <= 0:
+            return 0, ratio_info['unit'], "No es necesario añadir sal"
+        
+        # Calcular cantidad proporcionalmente
+        cantidad_base = ratio_info['ratio_per_1000L']
+        cantidad_total = (volumen_litros / 1000) * cantidad_base * (difference / ratio_info['param_change'])
+        
+    elif chemical_type in ['ph_minus', 'ph_plus']:
+        # Para pH, calcular diferencia en unidades de pH
+        difference = abs(target_value - current_value)
+        if difference < 0.05:  # Diferencia mínima significativa
+            return 0, ratio_info['unit'], "El pH ya está en el rango objetivo"
+        
+        # Verificar dirección correcta
+        if chemical_type == 'ph_minus' and target_value >= current_value:
+            return 0, ratio_info['unit'], "Usa pH+ para subir el pH, no pH-"
+        if chemical_type == 'ph_plus' and target_value <= current_value:
+            return 0, ratio_info['unit'], "Usa pH- para bajar el pH, no pH+"
+        
+        cantidad_base = ratio_info['ratio_per_1000L']
+        cantidad_total = (volumen_litros / 1000) * cantidad_base * (difference / ratio_info['param_change'])
+        
+    else:
+        # Para otros químicos (cloro shock, alguicida, clarificador)
+        cantidad_base = ratio_info['ratio_per_1000L']
+        cantidad_total = (volumen_litros / 1000) * cantidad_base
+    
+    return round(cantidad_total, 1), ratio_info['unit'], ratio_info['instructions']
+
+def show_chemical_calculator(volumen_litros):
+    """Muestra la interfaz de la calculadora de químicos"""
+    
+    st.markdown("#### 🧮 Calculadora de Químicos")
+    
+    if volumen_litros <= 0:
+        st.warning("⚠️ Primero define el volumen de tu piscina en la pestaña **Dimensiones**")
+        return
+    
+    st.success(f"📏 Volumen de tu piscina: **{volumen_litros:,.0f} litros**")
+    
+    # Pestañas para diferentes tipos de químicos
+    chem_tabs = st.tabs(["🧪 pH", "🧂 Sal", "💊 Cloro Shock", "🌿 Alguicida", "✨ Clarificador"])
+    
+    # ===== TAB pH =====
+    with chem_tabs[0]:
+        st.markdown("##### Corrección de pH")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            ph_actual = st.number_input("pH actual", min_value=6.0, max_value=9.0, value=7.0, step=0.1, key="ph_actual")
+            ph_objetivo = st.number_input("pH objetivo", min_value=6.0, max_value=9.0, value=7.4, step=0.1, key="ph_objetivo")
+        
+        with col2:
+            if ph_objetivo > ph_actual:
+                # Necesita pH+
+                cantidad, unidad, instrucciones = calculate_chemical_amounts(volumen_litros, 'ph_plus', ph_actual, ph_objetivo)
+                if cantidad > 0:
+                    st.success(f"📈 **Necesitas pH+ (Carbonato Sódico)**")
+                    st.metric("Cantidad necesaria", f"{cantidad} {unidad}")
+                else:
+                    st.info("ℹ️ No necesitas ajustar el pH")
+            elif ph_objetivo < ph_actual:
+                # Necesita pH-
+                cantidad, unidad, instrucciones = calculate_chemical_amounts(volumen_litros, 'ph_minus', ph_actual, ph_objetivo)
+                if cantidad > 0:
+                    st.error(f"📉 **Necesitas pH- (Ácido Muriático)**")
+                    st.metric("Cantidad necesaria", f"{cantidad} {unidad}")
+                else:
+                    st.info("ℹ️ No necesitas ajustar el pH")
+            else:
+                st.info("✅ El pH ya está en el objetivo")
+                cantidad, unidad, instrucciones = 0, "", ""
+        
+        if cantidad > 0:
+            st.markdown("**📋 Instrucciones:**")
+            st.info(instrucciones)
+    
+    # ===== TAB SAL =====
+    with chem_tabs[1]:
+        st.markdown("##### Corrección de Salinidad")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            sal_actual = st.number_input("Sal actual (ppm)", min_value=0, max_value=6000, value=3000, step=100, key="sal_actual")
+            sal_objetivo = st.number_input("Sal objetivo (ppm)", min_value=2000, max_value=5000, value=3500, step=100, key="sal_objetivo")
+        
+        with col2:
+            cantidad, unidad, instrucciones = calculate_chemical_amounts(volumen_litros, 'sal', sal_actual, sal_objetivo)
+            if cantidad > 0:
+                # Convertir a kg si es mucho
+                if cantidad >= 1000:
+                    st.success(f"🧂 **Sal necesaria: {cantidad/1000:.1f} kg**")
+                else:
+                    st.success(f"🧂 **Sal necesaria: {cantidad} g**")
+                
+                # Mostrar coste aproximado
+                precio_sal_kg = 1.5  # €/kg aproximado
+                coste = (cantidad/1000) * precio_sal_kg
+                st.metric("Coste aproximado", f"{coste:.2f} €")
+            else:
+                st.info("✅ La salinidad ya está en el objetivo")
+        
+        if cantidad > 0:
+            st.markdown("**📋 Instrucciones:**")
+            st.info(instrucciones)
+    
+    # ===== TAB CLORO SHOCK =====
+    with chem_tabs[2]:
+        st.markdown("##### Cloración Shock")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**¿Cuándo usar cloro shock?**")
+            st.markdown("- Agua verde/turbia")
+            st.markdown("- Después de lluvia intensa")
+            st.markdown("- Muchos bañistas")
+            st.markdown("- FAC muy bajo (<0.5 ppm)")
+        
+        with col2:
+            cantidad, unidad, instrucciones = calculate_chemical_amounts(volumen_litros, 'cloro_shock', 0, 2)
+            st.success(f"💊 **Cloro granulado necesario**")
+            st.metric("Dosis shock estándar", f"{cantidad} {unidad}")
+            
+            # Dosis intensiva
+            cantidad_intensiva = cantidad * 1.5
+            st.metric("Dosis intensiva (agua muy verde)", f"{cantidad_intensiva:.0f} {unidad}")
+        
+        st.markdown("**📋 Instrucciones:**")
+        st.info(instrucciones)
+        st.warning("⚠️ **Importante:** Aplicar solo al atardecer. No bañarse hasta que FAC <3ppm")
+    
+    # ===== TAB ALGUICIDA =====
+    with chem_tabs[3]:
+        st.markdown("##### Tratamiento Alguicida")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            tratamiento = st.selectbox("Tipo de tratamiento", 
+                                     ["Mantenimiento preventivo", "Tratamiento curativo"])
+        
+        with col2:
+            cantidad, unidad, instrucciones = calculate_chemical_amounts(volumen_litros, 'alguicida', 0, 1)
+            
+            if tratamiento == "Mantenimiento preventivo":
+                st.success(f"🌿 **Dosis mantenimiento**")
+                st.metric("Cantidad", f"{cantidad} {unidad}")
+                st.info("Aplicar cada 15 días")
+            else:
+                cantidad_curativa = cantidad * 2
+                st.warning(f"🌿 **Dosis curativa**")
+                st.metric("Cantidad", f"{cantidad_curativa:.0f} {unidad}")
+                st.info("Aplicar diariamente hasta eliminar algas")
+        
+        st.markdown("**📋 Instrucciones:**")
+        st.info(instrucciones)
+    
+    # ===== TAB CLARIFICADOR =====
+    with chem_tabs[4]:
+        st.markdown("##### Clarificador de Agua")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**¿Cuándo usar clarificador?**")
+            st.markdown("- Agua turbia/lechosa")
+            st.markdown("- Después de shock químico")
+            st.markdown("- Partículas en suspensión")
+            st.markdown("- Filtro no retiene partículas finas")
+        
+        with col2:
+            cantidad, unidad, instrucciones = calculate_chemical_amounts(volumen_litros, 'clarificador', 0, 1)
+            st.success(f"✨ **Clarificador necesario**")
+            st.metric("Cantidad", f"{cantidad} {unidad}")
+        
+        st.markdown("**📋 Instrucciones:**")
+        st.info(instrucciones)
+        st.warning("⚠️ **Importante:** Mantener filtración 24h. Aspirar fondo después de 48h")
+
 def main():
     # Título principal mejorado
     st.markdown('<h1 class="main-title">🏊‍♂️ Control de Piscina</h1>', 
@@ -1399,7 +1648,7 @@ def main():
         pool_info = get_pool_info(info_sheet)
         
         # Tabs para organizar la información
-        info_tabs = st.tabs(["📏 Dimensiones", "⚙️ Equipamiento", "📋 General"])
+        info_tabs = st.tabs(["📏 Dimensiones", "⚙️ Equipamiento", "📋 General"], "🧪 Químicos")
         
         # ==================== TAB 1: DIMENSIONES ====================
         with info_tabs[0]:
@@ -1600,7 +1849,48 @@ def main():
             else:
                 st.info("📝 Completa la información de tu piscina en las pestañas superiores")
 
-    
+        # ==================== TAB 4: QUÍMICOS ====================
+        with info_tabs[3]:
+            st.markdown("#### 🧪 Calculadora de Químicos")
+            
+            # Obtener volumen actual
+            volumen_actual = float(pool_info.get('Volumen_Litros', {}).get('valor', 0))
+            
+            # Mostrar calculadora
+            show_chemical_calculator(volumen_actual)
+            
+            # Información adicional
+            st.markdown("---")
+            st.markdown("#### 📚 Información Útil")
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.markdown("""
+                **🎯 Rangos Óptimos:**
+                - pH: 7.2 - 7.6
+                - Sal: 2700 - 4500 ppm
+                - FAC: 1.0 - 3.0 ppm
+                - ORP: 650 - 750 mV
+                """)
+            
+            with col2:
+                st.markdown("""
+                **⚠️ Precauciones:**
+                - Nunca mezclar químicos
+                - Aplicar al atardecer
+                - Bomba siempre funcionando
+                - Esperar entre aplicaciones
+                """)
+            
+            with col3:
+                st.markdown("""
+                **🛒 Químicos Básicos:**
+                - pH- (Ácido muriático)
+                - pH+ (Carbonato sódico)
+                - Sal especial piscinas
+                - Cloro granulado shock
+                """)    
     
     elif tab == "ℹ️ Rangos Óptimos":
         st.markdown("### 📚 Guía Completa de Parámetros")
