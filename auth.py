@@ -1,5 +1,7 @@
 import streamlit as st
 from authlib.integrations.requests_client import OAuth2Session
+pip install authlib
+
 
 def get_logged_user_email():
     """
@@ -40,6 +42,14 @@ def get_logged_user_email():
     oauth = OAuth2Session(client_id, client_secret, redirect_uri=redirect_uri, scope=scope)
     token = oauth.fetch_token(token_url, code=code)
 
+    from authlib.jose import jwt
+
+    # Obtener email desde el id_token (sin verificar firma)
+    id_token = token.get("id_token")
+    claims = jwt.decode(id_token, key=None, claims_cls=None, claims_options={"verify_signature": False})
+    email = claims.get("email")
+
+
     # Obtener info del usuario
     session = OAuth2Session(client_id, token=token)
     resp = session.get(userinfo_url)
@@ -50,9 +60,6 @@ def get_logged_user_email():
     st.write("User Info:", user_info)
     st.write("🔍 Google responde:", user_info)
     
-
-
-    email = user_info.get("email")
     if not email:
         st.error("No se pudo obtener el email del usuario.")
         st.stop()
