@@ -11,7 +11,7 @@ def main():
 
     authorize_url = "https://accounts.google.com/o/oauth2/auth"
     token_url = "https://oauth2.googleapis.com/token"
-    userinfo_url = "https://openidconnect.googleapis.com/v1/userinfo"
+    userinfo_url = "https://www.googleapis.com/oauth2/v2/userinfo"
 
     if "user_email" in st.session_state:
         st.success(f"✅ Usuario autenticado: {st.session_state['user_email']}")
