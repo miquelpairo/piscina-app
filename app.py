@@ -671,8 +671,8 @@ def calculate_chemical_amounts(volumen_litros, chemical_type, current_value, tar
     # Ratios estándar por 1000 litros
     chemical_ratios = {
         'ph_minus': {
-            'ratio_per_1000L': 10,  # 10ml de ácido muriático por 1000L para bajar 0.1 pH
-            'unit': 'ml',
+            'ratio_per_1000L':  5,  # 5g de TAMAR Reductor pH granulado por 1000L para bajar 0.1 pH
+            'unit': 'g',
             'param_change': 0.1,
             'instructions': 'Diluir en un cubo de agua y verter lentamente en la piscina con la bomba funcionando. Esperar 2-4 horas antes de medir.'
         },
@@ -782,7 +782,7 @@ def show_chemical_calculator(volumen_litros):
                 # Necesita pH-
                 cantidad, unidad, instrucciones = calculate_chemical_amounts(volumen_litros, 'ph_minus', ph_actual, ph_objetivo)
                 if cantidad > 0:
-                    st.error(f"📉 **Necesitas pH- (Ácido Muriático)**")
+                    st.error(f"📉 **Necesitas pH- (Reductor pH Grano)**")
                     st.metric("Cantidad necesaria", f"{cantidad} {unidad}")
                 else:
                     st.info("ℹ️ No necesitas ajustar el pH")
@@ -1886,7 +1886,7 @@ def main():
             with col3:
                 st.markdown("""
                 **🛒 Químicos Básicos:**
-                - pH- (Ácido muriático)
+                - pH- (Reductor pH Grano)
                 - pH+ (Carbonato sódico)
                 - Sal especial piscinas
                 - Cloro granulado shock
