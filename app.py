@@ -81,7 +81,7 @@ st.markdown("""
 # Configuración de Google Sheets
 @st.cache_resource
 def init_google_sheets():
-    """Inicializa la conexión con Google Sheets - VERSION SIMPLE"""
+    """Inicializa la conexión con Google Sheets"""
     try:
         scope = ['https://spreadsheets.google.com/feeds',
                 'https://www.googleapis.com/auth/drive']
@@ -100,17 +100,19 @@ def init_google_sheets():
         credentials = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         gc = gspread.authorize(credentials)
         
-        # Solo hojas existentes por ahora
+        # Abrir el archivo y devolver ambas hojas
         spreadsheet = gc.open(st.secrets["sheet_name"])
-        mediciones_sheet = spreadsheet.sheet1
+        mediciones_sheet = spreadsheet.sheet1  # Hoja original
         
-        # Intentar obtener mantenimiento
         try:
             mantenimiento_sheet = spreadsheet.worksheet("Mantenimiento")
         except:
-            mantenimiento_sheet = None
-            
-        # Por ahora, info_sheet = None
+            # Si no existe, crearla
+            mantenimiento_sheet = spreadsheet.add_worksheet(title="Mantenimiento", rows="1000", cols="6")
+            # Añadir encabezados
+            mantenimiento_sheet.append_row(["Fecha", "Tipo", "Estado_Antes", "Tiempo_Minutos", "Notas", "Proximo_Mantenimiento"])
+        
+        # TEMPORALMENTE: info_sheet como None
         info_sheet = None
         
         return mediciones_sheet, mantenimiento_sheet, info_sheet
@@ -543,7 +545,7 @@ def main():
     # Inicializar Google Sheets
     sheet, mant_sheet, info_sheet = init_google_sheets()
 
-    if sheet is None or mant_sheet is None or info_sheet is None:
+    if sheet is None or mant_sheet is None:
         st.error("⚠️ No se pudo conectar con Google Sheets. Verifica la configuración.")
         return
     
