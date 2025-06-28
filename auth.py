@@ -52,4 +52,12 @@ def get_logged_user_email():
         claims = json.loads(decoded_bytes)
         email = claims.get("email")
     except Exception as e:
-        st.error(f"❌ Error al deco
+        st.error(f"❌ Error al decodificar id_token: {e}")
+        st.stop()
+
+    if not email:
+        st.error("❌ No se pudo extraer el email del token.")
+        st.stop()
+
+    st.session_state["user_email"] = email
+    return email
