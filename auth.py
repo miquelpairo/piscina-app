@@ -15,7 +15,8 @@ def get_logged_user_email():
     # URL de autorización y token de Google
     authorize_url = "https://accounts.google.com/o/oauth2/auth"
     token_url = "https://oauth2.googleapis.com/token"
-    userinfo_url = "https://www.googleapis.com/oauth2/v2/userinfo"
+    userinfo_url = "https://openidconnect.googleapis.com/v1/userinfo"
+
 
     # Ya logueado
     if "user_email" in st.session_state:
