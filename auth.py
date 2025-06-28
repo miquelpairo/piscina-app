@@ -1,11 +1,9 @@
 import streamlit as st
 from authlib.integrations.requests_client import OAuth2Session
-import base64
-import json
 
 def get_logged_user_email():
     """
-    Autentica al usuario con Google OAuth y devuelve su email desde el ID token.
+    Autentica al usuario con Google OAuth y devuelve su email usando el endpoint oficial de userinfo.
     """
 
     client_id = st.secrets["google_oauth"]["client_id"]
@@ -15,12 +13,13 @@ def get_logged_user_email():
 
     authorize_url = "https://accounts.google.com/o/oauth2/auth"
     token_url = "https://oauth2.googleapis.com/token"
+    userinfo_url = "https://openidconnect.googleapis.com/v1/userinfo"
 
-    # Si ya está logueado
+    # Ya autenticado
     if "user_email" in st.session_state:
         return st.session_state["user_email"]
 
-    # Si no hay código de autorización en la URL
+    # Sin código de autorización → generar enlace
     if "code" not in st.query_params:
         auth_url = (
             f"{authorize_url}?response_type=code"
@@ -38,28 +37,23 @@ def get_logged_user_email():
     oauth = OAuth2Session(client_id, client_secret, redirect_uri=redirect_uri, scope=scope)
     token = oauth.fetch_token(token_url, code=code)
 
-    # Extraer email desde el id_token sin verificar firma
-    id_token = token.get("id_token")
-    if not id_token:
-        st.error("❌ No se recibió id_token de Google.")
+    # Usar access_token para obtener email directamente desde Google
+    session = OAuth2Session(client_id, token=token)
+    resp = session.get(userinfo_url)
+
+    if resp.status_code != 200:
+        st.error("❌ Error al obtener información del usuario.")
+        st.write("Respuesta completa:", resp.text)
         st.stop()
 
-    try:
-        st.write("🔍 id_token crudo:", id_token)
-        payload_part = id_token.split('.')[1]
-        padding = '=' * (-len(payload_part) % 4)
-        decoded_bytes = base64.urlsafe_b64decode(payload_part + padding)
-        claims = json.loads(decoded_bytes)
-        st.write("🔍 Payload decodificado:", claims)
+    user_info = resp.json()
+    st.write("✅ userinfo:", user_info)
 
-        email = claims.get("email")
-    except Exception as e:
-        st.error(f"❌ Error al decodificar id_token: {e}")
-        st.stop()
-
+    email = user_info.get("email")
     if not email:
-        st.error("❌ No se pudo extraer el email del token.")
+        st.error("❌ Google no devolvió email del usuario.")
         st.stop()
 
+    # Guardar en sesión
     st.session_state["user_email"] = email
     return email
