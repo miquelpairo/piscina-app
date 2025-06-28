@@ -787,7 +787,7 @@ def show_chemical_calculator(volumen_litros):
                 # Necesita pH+
                 cantidad, unidad, instrucciones = calculate_chemical_amounts(volumen_litros, 'ph_plus', ph_actual, ph_objetivo)
                 if cantidad > 0:
-                    st.success(f"📈 **Necesitas pH+ granulado**")
+                    st.success(f"📈 **Necesitas pH+ (Incrementador pH Grano)**")
                     st.metric("Cantidad necesaria", f"{cantidad} {unidad}")
                 else:
                     st.info("ℹ️ No necesitas ajustar el pH")
