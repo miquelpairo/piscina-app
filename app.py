@@ -15,18 +15,24 @@ st.set_page_config(
     layout="wide"
 )
 
-# Configuración PWA para iconos móviles
-
+# Configuración PWA para iconos móviles (versión forzada)
 st.markdown("""
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Pool Control">
-<meta name="theme-color" content="#2980b9">
-<link rel="apple-touch-icon" href="https://raw.githubusercontent.com/miquelpairo/piscina-app/main/assets/icon-192x192.png">
+<link rel="apple-touch-icon" sizes="57x57" href="https://raw.githubusercontent.com/miquelpairo/piscina-app/main/assets/icon-192x192.png">
+<link rel="apple-touch-icon" sizes="60x60" href="https://raw.githubusercontent.com/miquelpairo/piscina-app/main/assets/icon-192x192.png">
+<link rel="apple-touch-icon" sizes="72x72" href="https://raw.githubusercontent.com/miquelpairo/piscina-app/main/assets/icon-192x192.png">
+<link rel="apple-touch-icon" sizes="76x76" href="https://raw.githubusercontent.com/miquelpairo/piscina-app/main/assets/icon-192x192.png">
+<link rel="apple-touch-icon" sizes="114x114" href="https://raw.githubusercontent.com/miquelpairo/piscina-app/main/assets/icon-192x192.png">
+<link rel="apple-touch-icon" sizes="120x120" href="https://raw.githubusercontent.com/miquelpairo/piscina-app/main/assets/icon-192x192.png">
+<link rel="apple-touch-icon" sizes="144x144" href="https://raw.githubusercontent.com/miquelpairo/piscina-app/main/assets/icon-192x192.png">
+<link rel="apple-touch-icon" sizes="152x152" href="https://raw.githubusercontent.com/miquelpairo/piscina-app/main/assets/icon-192x192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/miquelpairo/piscina-app/main/assets/icon-192x192.png">
 <link rel="apple-touch-icon" sizes="192x192" href="https://raw.githubusercontent.com/miquelpairo/piscina-app/main/assets/icon-192x192.png">
 <link rel="icon" type="image/png" sizes="192x192" href="https://raw.githubusercontent.com/miquelpairo/piscina-app/main/assets/icon-192x192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="https://raw.githubusercontent.com/miquelpairo/piscina-app/main/assets/icon-512x512.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pool Control">
+<meta name="theme-color" content="#2980b9">
 """, unsafe_allow_html=True)
 
 # CSS personalizado para mejorar la apariencia
