@@ -6,9 +6,6 @@ from plotly.subplots import make_subplots
 from datetime import datetime, date, time
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import requests
-import json
-from urllib.parse import urlencode
 
 # Configuración de la página con tema oscuro
 st.set_page_config(
@@ -17,212 +14,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
-def get_google_oauth_url():
-    """Genera la URL para autenticación con Google"""
-    try:
-        client_id = st.secrets["google_oauth"]["client_id"]
-        redirect_uri = st.secrets["google_oauth"]["redirect_uri"]
-        
-        params = {
-            'client_id': client_id,
-            'redirect_uri': redirect_uri,
-            'scope': 'openid email',
-            'response_type': 'code',
-            'access_type': 'offline',
-            'prompt': 'consent'
-        }
-        
-        auth_url = 'https://accounts.google.com/o/oauth2/auth?' + urlencode(params)
-        return auth_url
-    except Exception as e:
-        st.error(f"Error configurando OAuth: {e}")
-        return None
-
-def exchange_code_for_token(code):
-    """Intercambia el código de autorización por un token"""
-    try:
-        client_id = st.secrets["google_oauth"]["client_id"]
-        client_secret = st.secrets["google_oauth"]["client_secret"]
-        redirect_uri = st.secrets["google_oauth"]["redirect_uri"]
-        
-        token_data = {
-            'code': code,
-            'client_id': client_id,
-            'client_secret': client_secret,
-            'redirect_uri': redirect_uri,
-            'grant_type': 'authorization_code'
-        }
-        
-        response = requests.post('https://oauth2.googleapis.com/token', data=token_data)
-        return response.json()
-    except Exception as e:
-        st.error(f"Error obteniendo token: {e}")
-        return None
-
-def get_user_info(access_token):
-    """Obtiene información del usuario desde Google"""
-    try:
-        headers = {'Authorization': f'Bearer {access_token}'}
-        response = requests.get('https://www.googleapis.com/oauth2/v2/userinfo', headers=headers)
-        return response.json()
-    except Exception as e:
-        st.error(f"Error obteniendo info del usuario: {e}")
-        return None
-
-def check_google_auth():
-    """Verifica y maneja la autenticación con Google"""
-    
-    # Verificar si ya está autenticado
-    if st.session_state.get('authenticated', False):
-        return True
-    
-    # Verificar si hay un código en la URL (callback de Google)
-    query_params = st.query_params
-    
-    if 'code' in query_params:
-        code = query_params['code'][0]
-        
-        # Intercambiar código por token
-        with st.spinner('🔐 Verificando credenciales...'):
-            token_response = exchange_code_for_token(code)
-            
-            if token_response and 'access_token' in token_response:
-                # Obtener información del usuario
-                user_info = get_user_info(token_response['access_token'])
-                
-                if user_info:
-                    # Guardar información en la sesión
-                    st.session_state.authenticated = True
-                    st.session_state.user_email = user_info.get('email', '')
-                    st.session_state.user_name = user_info.get('name', '')
-                    st.session_state.user_picture = user_info.get('picture', '')
-                    
-                    # Limpiar parámetros de URL
-                    st.query_params.clear()
-                    
-                    st.success(f"✅ ¡Bienvenido {st.session_state.user_name}!")
-                    st.rerun()
-                    
-    # Mostrar pantalla de login
-    show_login_screen()
-    return False
-
-def show_login_screen():
-    """Muestra la pantalla de login con Google"""
-    
-    # CSS específico para la pantalla de login
-    st.markdown("""
-    <style>
-        .login-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 60vh;
-            text-align: center;
-        }
-        
-        .login-card {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            padding: 40px;
-            margin: 20px;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
-            max-width: 400px;
-            width: 100%;
-        }
-        
-        .google-btn {
-            background: #4285f4;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 12px 24px;
-            font-size: 16px;
-            font-weight: 500;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            width: 100%;
-            text-decoration: none;
-            transition: background-color 0.3s;
-        }
-        
-        .google-btn:hover {
-            background: #357ae8;
-            color: white;
-            text-decoration: none;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    # Contenedor principal de login
-    st.markdown('<div class="login-container">', unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns([1, 2, 1])
-    
-    with col2:
-        st.markdown("""
-        <div class="login-card">
-            <div style="font-size: 4rem; margin-bottom: 20px;">🏊‍♂️</div>
-            <h2 style="color: #212529; margin-bottom: 10px;">Control de Piscina</h2>
-            <p style="color: #666; margin-bottom: 30px;">
-                Gestiona los parámetros de tu piscina de forma profesional
-            </p>
-            
-            <div style="margin-bottom: 20px;">
-                <p style="color: #888; font-size: 14px;">
-                    Inicia sesión con tu cuenta de Google para acceder
-                </p>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Botón de Google OAuth
-        auth_url = get_google_oauth_url()
-        if auth_url:
-            st.markdown(f"""
-            <a href="{auth_url}" target="_self" class="google-btn">
-                <svg width="20" height="20" viewBox="0 0 24 24">
-                    <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-                Continuar con Google
-            </a>
-            """, unsafe_allow_html=True)
-        else:
-            st.error("❌ Error de configuración OAuth. Verifica tus credenciales.")
-    
-    st.markdown('</div>', unsafe_allow_html=True)
-
-def show_user_info_sidebar():
-    """Muestra información del usuario en el sidebar"""
-    if st.session_state.get('authenticated', False):
-        with st.sidebar:
-            # Información del usuario
-            st.markdown("---")
-            st.markdown("### 👤 Usuario")
-            
-            # Foto de perfil si está disponible
-            if st.session_state.get('user_picture'):
-                st.image(st.session_state.user_picture, width=60)
-            
-            st.markdown(f"**{st.session_state.get('user_name', 'Usuario')}**")
-            st.markdown(f"📧 {st.session_state.get('user_email', '')}")
-            
-            # Botón de logout
-            st.markdown("---")
-            if st.button("🚪 Cerrar Sesión", use_container_width=True):
-                # Limpiar sesión
-                for key in ['authenticated', 'user_email', 'user_name', 'user_picture']:
-                    if key in st.session_state:
-                        del st.session_state[key]
-                st.rerun()
 
 # CSS personalizado para mejorar la apariencia
 st.markdown("""
@@ -740,10 +531,6 @@ def normalize_decimal(value):
         return "0.0"
 
 def main():
-    # 🔐 VERIFICAR AUTENTICACIÓN CON GOOGLE
-    if not check_google_auth():
-        return
-    
     # Título principal mejorado
     st.markdown('<h1 class="main-title">🏊‍♂️ Control de Piscina</h1>', 
                 unsafe_allow_html=True)
@@ -766,8 +553,6 @@ def main():
                       ["🏠 Dashboard", "📝 Nueva Medición", "📈 Gráficos", 
                        "📋 Historial", "🔧 Mantenimiento", "ℹ️ Rangos Óptimos"],
                       index=0)
-        # Mostrar información del usuario
-        show_user_info_sidebar()              
         
     if tab == "🏠 Dashboard":
         # Obtener datos más recientes
