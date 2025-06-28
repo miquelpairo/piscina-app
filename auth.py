@@ -1,6 +1,7 @@
 import streamlit as st
 from authlib.integrations.requests_client import OAuth2Session
-from authlib.jose import jwt  # ✅ Import correcto (debe ir arriba)
+import base64
+import json
 
 def get_logged_user_email():
     """
@@ -18,11 +19,11 @@ def get_logged_user_email():
     token_url = "https://oauth2.googleapis.com/token"
     userinfo_url = "https://openidconnect.googleapis.com/v1/userinfo"
 
-    # Ya logueado
+    # Si ya está logueado, devolver email guardado
     if "user_email" in st.session_state:
         return st.session_state["user_email"]
 
-    # No hay código de autorización en la URL
+    # Si no hay código de autorización en la URL, pedir login
     if "code" not in st.query_params:
         auth_url = (
             f"{authorize_url}?response_type=code"
@@ -40,12 +41,23 @@ def get_logged_user_email():
     oauth = OAuth2Session(client_id, client_secret, redirect_uri=redirect_uri, scope=scope)
     token = oauth.fetch_token(token_url, code=code)
 
-    # Extraer email desde el id_token (seguro aunque userinfo falle)
+    # Extraer el email desde el id_token (decodificando manualmente sin verificar firma)
     id_token = token.get("id_token")
-    claims = jwt.decode(id_token, key=None, claims_cls=None, claims_options={"verify_signature": False})
-    email = claims.get("email")
+    if not id_token:
+        st.error("No se pudo obtener el id_token de Google.")
+        st.stop()
 
-    # Obtener info del usuario (opcional para debugging)
+    try:
+        payload_part = id_token.split('.')[1]
+        padding = '=' * (-len(payload_part) % 4)  # Fix padding
+        decoded = base64.urlsafe_b64decode(payload_part + padding)
+        claims = json.loads(decoded)
+        email = claims.get("email")
+    except Exception as e:
+        st.error(f"❌ Error decodificando id_token: {e}")
+        st.stop()
+
+    # DEBUG opcional: ver respuesta de userinfo
     session = OAuth2Session(client_id, token=token)
     resp = session.get(userinfo_url)
     st.write("🔍 userinfo raw:", resp.status_code, resp.text)
