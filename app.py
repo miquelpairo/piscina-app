@@ -7,20 +7,20 @@ from datetime import datetime, date, time
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-# Configuración de la página con tema oscuro
+
+# Configuración básica de la página
 st.set_page_config(
-    page_title="🏊‍♂️ Control Piscina de Sal",
-    page_icon="🏊‍♂️",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    page_title="Pool Control",
+    page_icon="💧",
+    layout="wide"
 )
 
-# PASO 2: Configuración PWA (VA DESPUÉS DEL set_page_config)
+# Configuración PWA para iconos móviles
 st.markdown("""
 <head>
-    <link rel="apple-touch-icon" sizes="192x192" href="TU-URL-AQUI/icon-192x192.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="TU-URL-AQUI/icon-192x192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="TU-URL-AQUI/icon-512x512.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="https://raw.githubusercontent.com/miquelpairo/piscina-app/main/assets/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="https://raw.githubusercontent.com/miquelpairo/piscina-app/main/assets/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="https://raw.githubusercontent.com/miquelpairo/piscina-app/main/assets/icon-512x512.png">
     <meta name="theme-color" content="#2980b9">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
