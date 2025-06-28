@@ -7,9 +7,10 @@ from datetime import datetime, date, time
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
+# Configuración de la página con tema oscuro
 st.set_page_config(
-    page_title="Control Piscina",
-    page_icon="💧",
+    page_title="🏊‍♂️ Control Piscina de Sal",
+    page_icon="🏊‍♂️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -761,7 +762,7 @@ def calculate_chemical_amounts(volumen_litros, chemical_type, current_value, tar
 def show_chemical_calculator(volumen_litros):
     """Muestra la interfaz de la calculadora de químicos"""
     
-    st.markdown("#### 🧮 Calculadora de Químicos")
+
     
     if volumen_litros <= 0:
         st.warning("⚠️ Primero define el volumen de tu piscina en la pestaña **Dimensiones**")
