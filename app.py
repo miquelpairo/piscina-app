@@ -1887,7 +1887,7 @@ def main():
                 st.markdown("""
                 **🛒 Químicos Básicos:**
                 - pH- (Reductor pH Grano)
-                - pH+ (Carbonato sódico)
+                - pH+ (Incrementador pH Granulado)
                 - Sal especial piscinas
                 - Cloro granulado shock
                 """)    
