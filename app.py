@@ -81,7 +81,7 @@ st.markdown("""
 # Configuración de Google Sheets
 @st.cache_resource
 def init_google_sheets():
-    """Inicializa la conexión con Google Sheets"""
+    """Inicializa la conexión con Google Sheets - VERSION SIMPLE"""
     try:
         scope = ['https://spreadsheets.google.com/feeds',
                 'https://www.googleapis.com/auth/drive']
@@ -100,38 +100,18 @@ def init_google_sheets():
         credentials = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         gc = gspread.authorize(credentials)
         
-        # Abrir el archivo y devolver las tres hojas
+        # Solo hojas existentes por ahora
         spreadsheet = gc.open(st.secrets["sheet_name"])
-        mediciones_sheet = spreadsheet.sheet1  # Hoja original
+        mediciones_sheet = spreadsheet.sheet1
         
-        # Segunda hoja: Mantenimiento
+        # Intentar obtener mantenimiento
         try:
             mantenimiento_sheet = spreadsheet.worksheet("Mantenimiento")
         except:
-            # Si no existe, crearla
-            mantenimiento_sheet = spreadsheet.add_worksheet(title="Mantenimiento", rows="1000", cols="6")
-            # Añadir encabezados
-            mantenimiento_sheet.append_row(["Fecha", "Tipo", "Estado_Antes", "Tiempo_Minutos", "Notas", "Proximo_Mantenimiento"])
-        
-        # Tercera hoja: Información de la piscina
-        try:
-            info_sheet = spreadsheet.worksheet("Info_Piscina")
-        except:
-            # Si no existe, crearla
-            info_sheet = spreadsheet.add_worksheet(title="Info_Piscina", rows="100", cols="3")
-            # Añadir datos iniciales
-            info_sheet.append_row(["Campo", "Valor", "Notas"])
-            info_sheet.append_row(["Volumen_Litros", "0", "Volumen total en litros"])
-            info_sheet.append_row(["Largo_Metros", "0", "Largo en metros"])
-            info_sheet.append_row(["Ancho_Metros", "0", "Ancho en metros"])
-            info_sheet.append_row(["Profundidad_Metros", "0", "Profundidad promedio"])
-            info_sheet.append_row(["Ubicacion", "", "Ubicación de la piscina"])
-            info_sheet.append_row(["Fecha_Instalacion", "", "Fecha de instalación"])
-            info_sheet.append_row(["Bomba_Modelo", "", "Modelo de la bomba"])
-            info_sheet.append_row(["Filtro_Tipo", "", "Tipo de filtro"])
-            info_sheet.append_row(["Clorador_Modelo", "", "Modelo clorador salino"])
-            info_sheet.append_row(["Generador_Porcentaje", "50", "% actual del generador"])
-            info_sheet.append_row(["Notas_Generales", "", "Notas importantes"])
+            mantenimiento_sheet = None
+            
+        # Por ahora, info_sheet = None
+        info_sheet = None
         
         return mediciones_sheet, mantenimiento_sheet, info_sheet
         
