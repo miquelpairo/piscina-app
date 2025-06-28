@@ -27,7 +27,7 @@ def get_google_oauth_url():
         params = {
             'client_id': client_id,
             'redirect_uri': redirect_uri,
-            'scope': 'openid email profile',
+            'scope': 'openid email',
             'response_type': 'code',
             'access_type': 'offline',
             'prompt': 'consent'
