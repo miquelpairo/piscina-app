@@ -45,7 +45,9 @@ def get_logged_user_email():
     user_info = resp.json()
 
     # DEBUG opcional
-    # st.write("User Info:", user_info)
+    st.write("User Info:", user_info)
+    st.write("🔍 Google responde:", user_info)
+
 
     email = user_info.get("email")
     if not email:
