@@ -1291,6 +1291,17 @@ def main():
             else:
                 st.info("📊 No hay registros de mantenimiento aún.")
             
+    elif tab == "🏊‍♂️ Info Piscina":
+        st.markdown("### 🏊‍♂️ Información de la Piscina")
+        st.info("📝 Sección en construcción - próximamente podrás editar la información de tu piscina")
+        
+        # Mostrar datos actuales
+        st.markdown("#### 📋 Datos actuales")
+        st.write("Volumen: Por definir")
+        st.write("Dimensiones: Por definir") 
+        st.write("Equipamiento: Por definir")
+    
+    
     elif tab == "ℹ️ Rangos Óptimos":
         st.markdown("### 📚 Guía Completa de Parámetros")
         
