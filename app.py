@@ -1750,9 +1750,9 @@ def main():
                     
                     filtro_tipo = st.selectbox(
                         "Tipo de filtro",
-                        ["", "Arena", "Cartucho", "Diatomea", "Otro"],
+                        ["", "Arena", "Cartucho", "Diatomea", "Vidrio", "Otro"],
                         index=0 if not pool_info.get('Filtro_Tipo', {}).get('valor') else 
-                              ["", "Arena", "Cartucho", "Diatomea", "Otro"].index(pool_info.get('Filtro_Tipo', {}).get('valor')) if pool_info.get('Filtro_Tipo', {}).get('valor') in ["", "Arena", "Cartucho", "Diatomea", "Otro"] else 0
+                              ["", "Arena", "Cartucho", "Diatomea", "Vidrio", "Otro"].index(pool_info.get('Filtro_Tipo', {}).get('valor')) if pool_info.get('Filtro_Tipo', {}).get('valor') in ["", "Arena", "Cartucho", "Diatomea", "Otro"] else 0
                     )
                     
                     clorador_modelo = st.text_input(
