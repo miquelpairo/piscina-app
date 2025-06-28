@@ -8,8 +8,8 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 st.set_page_config(
-    page_title="🏊‍♂️ Control Piscina de Sal",
-    page_icon="🏊‍♂️",
+    page_title="Control Piscina",
+    page_icon="💧",
     layout="wide",
     initial_sidebar_state="expanded"
 )
