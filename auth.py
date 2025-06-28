@@ -41,7 +41,7 @@ def get_logged_user_email():
     access_token = token["access_token"]
 
     # Obtener info del usuario
-    session = OAuth2Session(client_id, token=access_token)
+    session = OAuth2Session(client_id, token=token)
     resp = session.get(userinfo_url)
     user_info = resp.json()
 
