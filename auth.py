@@ -10,7 +10,7 @@ def get_logged_user_email():
     client_id = st.secrets["google_oauth"]["client_id"]
     client_secret = st.secrets["google_oauth"]["client_secret"]
     redirect_uri = st.secrets["google_oauth"]["redirect_uri"]
-    scope = "openid email profile"
+    scope = ["openid", "email", "profile"]  # ✅ LISTA
 
     # URL de autorización y token de Google
     authorize_url = "https://accounts.google.com/o/oauth2/auth"
@@ -27,7 +27,7 @@ def get_logged_user_email():
             f"{authorize_url}?response_type=code"
             f"&client_id={client_id}"
             f"&redirect_uri={redirect_uri}"
-            f"&scope={scope}"
+            f"&scope={' '.join(scope)}"
             f"&access_type=offline"
             f"&prompt=consent"
         )
@@ -36,14 +36,16 @@ def get_logged_user_email():
 
     # Intercambiar código por token
     code = st.query_params["code"]
-    oauth = OAuth2Session(client_id, client_secret, redirect_uri=redirect_uri)
+    oauth = OAuth2Session(client_id, client_secret, redirect_uri=redirect_uri, scope=scope)
     token = oauth.fetch_token(token_url, code=code)
-    access_token = token["access_token"]
 
     # Obtener info del usuario
     session = OAuth2Session(client_id, token=token)
     resp = session.get(userinfo_url)
     user_info = resp.json()
+
+    # DEBUG opcional
+    # st.write("User Info:", user_info)
 
     email = user_info.get("email")
     if not email:
