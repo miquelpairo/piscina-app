@@ -100,10 +100,11 @@ def init_google_sheets():
         credentials = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         gc = gspread.authorize(credentials)
         
-        # Abrir el archivo y devolver ambas hojas
+        # Abrir el archivo y devolver las hojas
         spreadsheet = gc.open(st.secrets["sheet_name"])
         mediciones_sheet = spreadsheet.sheet1  # Hoja original
         
+        # Segunda hoja: Mantenimiento
         try:
             mantenimiento_sheet = spreadsheet.worksheet("Mantenimiento")
         except:
@@ -112,8 +113,51 @@ def init_google_sheets():
             # Añadir encabezados
             mantenimiento_sheet.append_row(["Fecha", "Tipo", "Estado_Antes", "Tiempo_Minutos", "Notas", "Proximo_Mantenimiento"])
         
-        # TEMPORALMENTE: info_sheet como None
-        info_sheet = None
+        # Tercera hoja: Información de la piscina (más robusta)
+        try:
+            info_sheet = spreadsheet.worksheet("Info_Piscina")
+        except:
+            try:
+                # Crear hoja básica
+                info_sheet = spreadsheet.add_worksheet(title="Info_Piscina", rows="50", cols="3")
+                
+                # Añadir datos uno por uno (más seguro)
+                info_sheet.update('A1:C1', [["Campo", "Valor", "Notas"]])
+                
+                # Datos básicos
+                basic_data = [
+                    ["Volumen_Litros", "0", "Volumen total en litros"],
+                    ["Largo_Metros", "0", "Largo en metros"],
+                    ["Ancho_Metros", "0", "Ancho en metros"],
+                    ["Profundidad_Metros", "0", "Profundidad promedio"],
+                    ["Ubicacion", "", "Ubicación de la piscina"],
+                    ["Fecha_Instalacion", "", "Fecha de instalación"],
+                    ["Bomba_Modelo", "", "Modelo de la bomba"],
+                    ["Filtro_Tipo", "", "Tipo de filtro"],
+                    ["Clorador_Modelo", "", "Modelo clorador salino"],
+                    ["Generador_Porcentaje", "50", "% actual del generador"],
+                    ["Notas_Generales", "", "Notas importantes"]
+                ]
+                
+                # Añadir datos en lotes pequeños
+                for i, row in enumerate(basic_data):
+                    try:
+                        info_sheet.update(f'A{i+2}:C{i+2}', [row])
+                    except:
+                        # Si falla una fila, continuar con las demás
+                        pass
+                        
+            except Exception as e:
+                # Si todo falla, crear hoja vacía
+                try:
+                    info_sheet = spreadsheet.add_worksheet(title="Info_Piscina", rows="10", cols="3")
+                    info_sheet.update('A1', "Campo")
+                    info_sheet.update('B1', "Valor") 
+                    info_sheet.update('C1', "Notas")
+                except:
+                    # Último recurso: None
+                    info_sheet = None
+                    st.warning("⚠️ No se pudo crear la hoja Info_Piscina. Funcionalidad limitada.")
         
         return mediciones_sheet, mantenimiento_sheet, info_sheet
         
@@ -1274,8 +1318,12 @@ def main():
                 st.info("📊 No hay registros de mantenimiento aún.")
             
     elif tab == "🏊‍♂️ Info Piscina":
-        st.markdown("### 🏊‍♂️ Información de la Piscina")
-        st.info("📝 Sección en construcción - próximamente podrás editar la información de tu piscina")
+        if info_sheet is None:
+            st.warning("⚠️ La hoja de información no está disponible. Creando...")
+            st.button("🔄 Reintentar crear hoja", on_click=st.cache_resource.clear)
+        else:
+            st.markdown("### 🏊‍♂️ Información de la Piscina")
+            st.success("✅ Hoja Info_Piscina disponible")
         
         # Mostrar datos actuales
         st.markdown("#### 📋 Datos actuales")
