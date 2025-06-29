@@ -939,6 +939,13 @@ def main():
                        "📋 Historial", "🔧 Mantenimiento",  "🏊‍♂️ Info Piscina", "ℹ️ Rangos Óptimos"],
                       index=0)
         
+        st.markdown("---")
+        st.markdown(f"👤 **Sesión iniciada como:** `{st.session_state['user_email']}`")
+        if st.button("🔓 Cerrar sesión"):
+            for key in ["user_email", "just_logged_in", "token_used"]:
+                st.session_state.pop(key, None)
+            st.experimental_rerun()
+
     if tab == "🏠 Dashboard":
         # Obtener datos más recientes
         df = get_data_from_sheets(main_sheet)
