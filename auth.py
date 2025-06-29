@@ -13,11 +13,11 @@ def get_logged_user_email():
     token_url = "https://oauth2.googleapis.com/token"
     userinfo_url = "https://openidconnect.googleapis.com/v1/userinfo"
 
-    # ✅ Ya autenticado
+    # ✅ Si ya está autenticado
     if "user_email" in st.session_state:
         return st.session_state["user_email"]
 
-    # ✅ Si no hay código, generar enlace
+    # ✅ Si no hay código, mostrar login
     if "code" not in st.query_params:
         auth_url = (
             f"{authorize_url}?response_type=code"
@@ -30,15 +30,14 @@ def get_logged_user_email():
         st.markdown(f"[🔐 Iniciar sesión con Google]({auth_url})")
         st.stop()
 
-    # ✅ Si hay código, intercambiar por token
+    # ✅ Intercambiar el código solo una vez
     if "token_used" not in st.session_state:
         code = st.query_params["code"]
         oauth = OAuth2Session(client_id, client_secret, redirect_uri=redirect_uri, scope=scope)
         token = oauth.fetch_token(token_url, code=code)
-
-        # Obtener email
         session = OAuth2Session(client_id, token=token)
         resp = session.get(userinfo_url)
+
         if resp.status_code != 200:
             st.error("❌ Error al obtener información del usuario.")
             st.stop()
@@ -49,14 +48,13 @@ def get_logged_user_email():
             st.error("❌ Google no devolvió email del usuario.")
             st.stop()
 
-        # Guardar sesión
         st.session_state["user_email"] = email
         st.session_state["just_logged_in"] = True
         st.session_state["token_used"] = True
 
-        # ⚠️ Limpiar la URL
-        st.rerun()
+        # Limpiar la URL (para quitar `?code=...`)
+        st.experimental_rerun()
+    else:
+        st.stop()  # Si se vuelve a entrar con código ya usado
 
-    # ❌ Si el código ya fue usado pero sigue en la URL → no volver a intentar
-    st.error("⚠️ Error al cargar sesión. Refresca sin parámetros en la URL o vuelve a iniciar sesión.")
-    st.stop()
+    return None  # Nunca llega aquí
