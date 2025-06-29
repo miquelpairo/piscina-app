@@ -946,15 +946,16 @@ def main():
 
         # 📸 Imagen de usuario centrada con estilos garantizados
         if "user_picture" in st.session_state:
-            components.html(
+            st.markdown(
                 f"""
-                <div style='text-align: center; margin-top: 1rem; margin-bottom: 0.5rem;'>
+                <div style="display: flex; justify-content: center; margin: 1rem 0;">
                     <img src="{st.session_state['user_picture']}" 
-                         style='border-radius: 50%; width: 80px; height: 80px; object-fit: cover;'>
+                         style="border-radius: 50%; width: 80px; height: 80px; object-fit: cover;">
                 </div>
                 """,
-                height=100
+                unsafe_allow_html=True
             )
+
     
         # 📧 Email del usuario centrado y estilizado
         if "user_email" in st.session_state:
