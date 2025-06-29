@@ -50,4 +50,10 @@ def get_logged_user_email():
         st.query_params.clear()
         st.rerun()
     else:
-        return st.session_state["user_email"]
+         # ⚠️ Si perdimos el email, limpiar `token_used` y relanzar login
+        if "user_email" not in st.session_state:
+            del st.session_state["token_used"]
+            st.rerun()
+        else:
+            return st.session_state["user_email"]
+        
