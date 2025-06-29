@@ -13,6 +13,11 @@ from user_lookup import get_user_spreadsheet_id
 
 # 🔐 Autenticación por Google OAuth
 email = get_logged_user_email()
+if st.session_state.get("just_logged_in"):
+    st.success(f"✅ Bienvenido, {st.session_state['user_email']}")
+    del st.session_state["just_logged_in"]
+
+
 
 # 🔎 Buscar en la hoja maestra el spreadsheet_id asignado al email
 try:
