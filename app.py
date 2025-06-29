@@ -172,10 +172,10 @@ def init_google_sheets(spreadsheet_id):
         return None, None, None
 
 
-def get_data_from_sheets(sheet):
+def get_data_from_sheets(main_sheet):
     """Obtiene los datos de Google Sheets"""
     try:
-        data = sheet.get_all_records()
+        data = main_sheet.get_all_records()
         if data:
             df = pd.DataFrame(data)
             
@@ -197,10 +197,10 @@ def get_data_from_sheets(sheet):
         st.error(f"Error obteniendo datos: {e}")
         return pd.DataFrame()
 
-def add_data_to_sheets(sheet, data):
+def add_data_to_sheets(main_sheet, data):
     """Añade una nueva fila de datos a Google Sheets"""
     try:
-        sheet.append_row(data)
+        main_sheet.append_row(data)
         return True
     except Exception as e:
         st.error(f"Error guardando datos: {e}")
@@ -913,9 +913,9 @@ def main():
         st.session_state.confirm_delete = {}
     
     # 📄 Cargar las hojas de su archivo personal
-    sheet, maintenance_sheet, info_sheet = init_google_sheets(spreadsheet_id)
+    main_sheet, maintenance_sheet, info_sheet = init_google_sheets(spreadsheet_id)
 
-    if sheet is None or maintenance_sheet is None:
+    if main_sheet is None or maintenance_sheet is None:
         st.error("⚠️ No se pudo conectar con Google Sheets. Verifica la configuración.")
         return
     
@@ -929,7 +929,7 @@ def main():
         
     if tab == "🏠 Dashboard":
         # Obtener datos más recientes
-        df = get_data_from_sheets(sheet)
+        df = get_data_from_sheets(main_sheet)
         
         if df.empty:
             st.info("📊 No hay datos disponibles. Añade tu primera medición.")
@@ -1133,7 +1133,7 @@ def main():
                         ph_norm, conductividad_norm, tds_norm, sal_norm, orp_norm, fac_norm, temperatura_norm
                     ]
                     
-                    if add_data_to_sheets(sheet, data_row):
+                    if add_data_to_sheets(main_sheet, data_row):
                         st.success("✅ ¡Medición guardada correctamente!")
                         st.balloons()
                     else:
@@ -1144,7 +1144,7 @@ def main():
     elif tab == "📈 Gráficos":
         st.markdown("### 📈 Análisis de Tendencias")
         
-        df = get_data_from_sheets(sheet)
+        df = get_data_from_sheets(main_sheet)
         
         if df.empty:
             st.info("📊 No hay datos para mostrar. Añade algunas mediciones primero.")
@@ -1245,7 +1245,7 @@ def main():
     elif tab == "📋 Historial":
         st.markdown("### 📋 Historial Completo de Mediciones")
         
-        df = get_data_from_sheets(sheet)
+        df = get_data_from_sheets(main_sheet)
         
         if df.empty:
             st.info("📊 No hay datos para mostrar.")
