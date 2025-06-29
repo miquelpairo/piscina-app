@@ -50,4 +50,5 @@ def get_logged_user_email():
         st.stop()
 
     st.session_state["user_email"] = email
+    st.session_state["just_logged_in"] = True  # ✅ Marcar que acaba de iniciar sesión
     return email
