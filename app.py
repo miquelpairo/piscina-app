@@ -934,13 +934,16 @@ def main():
     # Sidebar mejorado
     with st.sidebar:
         st.markdown("### 🎛️ Panel de Control")
-        tab = st.radio("Navegación:", 
-                      ["🏠 Dashboard", "📝 Nueva Medición", "📈 Gráficos", 
-                       "📋 Historial", "🔧 Mantenimiento",  "🏊‍♂️ Info Piscina", "ℹ️ Rangos Óptimos"],
-                      index=0)
-        
-        st.markdown("---")
-        st.markdown(f"👤 **Sesión iniciada como:** `{st.session_state['user_email']}`")
+        tab = st.radio(
+            "Navegación:", 
+            [
+                "🏠 Dashboard", "📝 Nueva Medición", "📈 Gráficos", 
+                "📋 Historial", "🔧 Mantenimiento", "🏊‍♂️ Info Piscina", "ℹ️ Rangos Óptimos"
+            ],
+            index=0
+        )
+
+        # 🔓 Logout button al final del sidebar
         if st.button("🔓 Cerrar sesión"):
             for key in ["user_email", "just_logged_in", "token_used"]:
                 st.session_state.pop(key, None)
