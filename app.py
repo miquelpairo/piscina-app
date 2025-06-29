@@ -952,7 +952,7 @@ def main():
                     <tr>
                         <td style="text-align: center;">
                             <img src="{st.session_state['user_picture']}" 
-                                 style="border-radius: 50%; width: 80px; height: 80px; object-fit: cover;">
+                                 style="border-radius: 50%; width: 160px; height: 160px; object-fit: cover;">
                         </td>
                     </tr>
                 </table>
@@ -960,17 +960,7 @@ def main():
                 unsafe_allow_html=True
             )
             
-        # 📸 Imagen de usuario centrada con estilos garantizados
-        if "user_picture" in st.session_state:
-            st.markdown(
-                f"""
-                <div style="display: flex; justify-content: center; margin: 1rem 0;">
-                    <img src="{st.session_state['user_picture']}" 
-                         style="border-radius: 50%; width: 160px; height: 80px; object-fit: cover;">
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+
 
     
         # 📧 Email del usuario centrado y estilizado
