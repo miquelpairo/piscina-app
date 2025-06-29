@@ -943,6 +943,9 @@ def main():
             index=0
         )
         
+        if "user_picture" in st.session_state:
+            st.image(st.session_state["user_picture"], width=80)
+        
         # ✅ Mostrar email si existe
         if "user_email" in st.session_state:
             st.markdown(f"**👤 Usuario:** {st.session_state['user_email']}")
