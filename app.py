@@ -1228,7 +1228,7 @@ def main():
         
         # Gráfico de comparativa múltiple
         st.markdown("### 📊 Comparativa Multi-Parámetro")
-        params_multi = st.multiselect("Selecciona parámetros:", parametros, default=['pH', 'FAC'])
+        params_multi = st.multiselect("Selecciona parámetros:", parametros, default=['pH', 'ORP'])
         
         if params_multi:
             # Normalizar datos con rangos ampliados para mejor visualización
