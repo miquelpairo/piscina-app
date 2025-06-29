@@ -39,6 +39,7 @@ def get_logged_user_email():
 
         email = user_info.get("email")
         picture = user_info.get("picture")
+        st.write("📷 URL de la foto del usuario:", picture)  # ← Debug temporal
         
         if not email:
             st.error("❌ Google no devolvió email del usuario.")
