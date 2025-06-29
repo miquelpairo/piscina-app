@@ -14,12 +14,15 @@ from user_lookup import get_user_spreadsheet_id
 # 🔐 Autenticación por Google OAuth
 if "user_email" not in st.session_state:
     email = get_logged_user_email()
+    st.stop()  # ⛔️ Muy importante para detener aquí tras login
 else:
     email = st.session_state["user_email"]
 
+# Mostrar bienvenida solo una vez
 if st.session_state.get("just_logged_in"):
     st.success(f"✅ Bienvenido, {email}")
     del st.session_state["just_logged_in"]
+
 
 
 
