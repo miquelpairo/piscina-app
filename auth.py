@@ -47,7 +47,7 @@ def get_logged_user_email():
         st.session_state["token_used"] = True
 
         # ✅ Recarga limpia sin parámetros
-        st.experimental_set_query_params()
+        st.query_params()
         st.rerun()
     else:
         return st.session_state["user_email"]
