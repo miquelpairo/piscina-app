@@ -12,7 +12,7 @@ from auth import get_logged_user_email
 from user_lookup import get_user_spreadsheet_id
 
 # 🔐 Autenticación por Google OAuth
-email = "user_email"
+email = "pairo.miquel@gmail.com"
 
 # 🔎 Buscar en la hoja maestra el spreadsheet_id asignado al email
 try:
