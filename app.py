@@ -4,29 +4,34 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime, date, time
+
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-# Configuración de la página con tema oscuro
-st.set_page_config(
-    page_title="🏊‍♂️ Control Piscina de Sal",
-    page_icon="🏊‍♂️",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+from auth import get_logged_user_email
+from user_lookup import get_user_spreadsheet_id
 
-# PASO 2: Configuración PWA (VA DESPUÉS DEL set_page_config)
-st.markdown("""
-<head>
-    <link rel="apple-touch-icon" sizes="192x192" href="TU-URL-AQUI/icon-192x192.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="TU-URL-AQUI/icon-192x192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="TU-URL-AQUI/icon-512x512.png">
-    <meta name="theme-color" content="#2980b9">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Pool Control">
-</head>
-""", unsafe_allow_html=True)
+# 🔐 Autenticación por Google OAuth
+email = "pairo.miquel@gmail.com"
+
+# 🔎 Buscar en la hoja maestra el spreadsheet_id asignado al email
+try:
+    spreadsheet_id = get_user_spreadsheet_id(email)
+except ValueError as e:
+    st.error(str(e))
+    st.stop()
+
+st.success(f"✅ Bienvenido, {email}")
+
+# 📄 Cargar las hojas de su archivo personal
+mediciones_sheet, mantenimiento_sheet, info_sheet = init_google_sheets(spreadsheet_id)
+
+# Configuración básica de la página
+st.set_page_config(
+    page_title="Control de piscina",
+    page_icon="💧",
+    layout="wide"
+)
 
 # CSS personalizado para mejorar la apariencia
 st.markdown("""
@@ -93,12 +98,12 @@ st.markdown("""
 
 # Configuración de Google Sheets
 @st.cache_resource
-def init_google_sheets():
-    """Inicializa la conexión con Google Sheets"""
+def init_google_sheets(spreadsheet_id):
+    """Inicializa la conexión con Google Sheets para el usuario autenticado"""
     try:
         scope = ['https://spreadsheets.google.com/feeds',
-                'https://www.googleapis.com/auth/drive']
-        
+                 'https://www.googleapis.com/auth/drive']
+
         creds_dict = {
             "type": st.secrets["gcp_service_account"]["type"],
             "project_id": st.secrets["gcp_service_account"]["project_id"],
@@ -109,35 +114,29 @@ def init_google_sheets():
             "auth_uri": st.secrets["gcp_service_account"]["auth_uri"],
             "token_uri": st.secrets["gcp_service_account"]["token_uri"],
         }
-        
+
         credentials = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         gc = gspread.authorize(credentials)
-        
-        # Abrir el archivo y devolver las hojas
-        spreadsheet = gc.open(st.secrets["sheet_name"])
-        mediciones_sheet = spreadsheet.sheet1  # Hoja original
-        
+
+        # Abrir hoja del usuario
+        spreadsheet = gc.open_by_key(spreadsheet_id)
+        mediciones_sheet = spreadsheet.sheet1  # Primera hoja (por defecto)
+
         # Segunda hoja: Mantenimiento
         try:
             mantenimiento_sheet = spreadsheet.worksheet("Mantenimiento")
         except:
-            # Si no existe, crearla
             mantenimiento_sheet = spreadsheet.add_worksheet(title="Mantenimiento", rows="1000", cols="6")
-            # Añadir encabezados
             mantenimiento_sheet.append_row(["Fecha", "Tipo", "Estado_Antes", "Tiempo_Minutos", "Notas", "Proximo_Mantenimiento"])
-        
-        # Tercera hoja: Información de la piscina (más robusta)
+
+        # Tercera hoja: Información de la piscina
         try:
             info_sheet = spreadsheet.worksheet("Info_Piscina")
         except:
             try:
-                # Crear hoja básica
                 info_sheet = spreadsheet.add_worksheet(title="Info_Piscina", rows="50", cols="3")
-                
-                # Añadir datos uno por uno (más seguro)
                 info_sheet.update('A1:C1', [["Campo", "Valor", "Notas"]])
-                
-                # Datos básicos
+
                 basic_data = [
                     ["Volumen_Litros", "0", "Volumen total en litros"],
                     ["Largo_Metros", "0", "Largo en metros"],
@@ -151,32 +150,28 @@ def init_google_sheets():
                     ["Generador_Porcentaje", "50", "% actual del generador"],
                     ["Notas_Generales", "", "Notas importantes"]
                 ]
-                
-                # Añadir datos en lotes pequeños
+
                 for i, row in enumerate(basic_data):
                     try:
                         info_sheet.update(f'A{i+2}:C{i+2}', [row])
                     except:
-                        # Si falla una fila, continuar con las demás
                         pass
-                        
             except Exception as e:
-                # Si todo falla, crear hoja vacía
                 try:
                     info_sheet = spreadsheet.add_worksheet(title="Info_Piscina", rows="10", cols="3")
                     info_sheet.update('A1', "Campo")
                     info_sheet.update('B1', "Valor") 
                     info_sheet.update('C1', "Notas")
                 except:
-                    # Último recurso: None
                     info_sheet = None
                     st.warning("⚠️ No se pudo crear la hoja Info_Piscina. Funcionalidad limitada.")
-        
+
         return mediciones_sheet, mantenimiento_sheet, info_sheet
-        
+
     except Exception as e:
-        st.error(f"Error conectando con Google Sheets: {e}")
+        st.error(f"❌ Error conectando con Google Sheets: {e}")
         return None, None, None
+
 
 def get_data_from_sheets(sheet):
     """Obtiene los datos de Google Sheets"""
@@ -762,7 +757,7 @@ def calculate_chemical_amounts(volumen_litros, chemical_type, current_value, tar
 def show_chemical_calculator(volumen_litros):
     """Muestra la interfaz de la calculadora de químicos"""
     
-
+    st.markdown("#### 🧮 Calculadora de Químicos")
     
     if volumen_litros <= 0:
         st.warning("⚠️ Primero define el volumen de tu piscina en la pestaña **Dimensiones**")
@@ -787,7 +782,7 @@ def show_chemical_calculator(volumen_litros):
                 # Necesita pH+
                 cantidad, unidad, instrucciones = calculate_chemical_amounts(volumen_litros, 'ph_plus', ph_actual, ph_objetivo)
                 if cantidad > 0:
-                    st.success(f"📈 **Necesitas pH+ (Incrementador pH Grano)**")
+                    st.success(f"📈 **Necesitas pH+ (Carbonato Sódico)**")
                     st.metric("Cantidad necesaria", f"{cantidad} {unidad}")
                 else:
                     st.info("ℹ️ No necesitas ajustar el pH")
