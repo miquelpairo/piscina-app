@@ -408,10 +408,10 @@ def get_chart_range(param):
     """Define rangos personalizados para cada parámetro en los gráficos"""
     ranges = {
         'pH': [6, 8.5],
-        'Sal': [2000, 5000],
-        'Conductividad': [2000, 9000],
-        'TDS': [1000, 5000],
-        'ORP': [200, 800],
+        'Sal': [2000, 4500],
+        'Conductividad': [2000, 8000],
+        'TDS': [1000, 4500],
+        'ORP': [500, 800],
         'FAC': [0, 3],
         'Temperatura': [20, 35]
     }
