@@ -931,9 +931,9 @@ def main():
         st.error("⚠️ No se pudo conectar con Google Sheets. Verifica la configuración.")
         return
     
-    # Sidebar mejorado
     with st.sidebar:
         st.markdown("### 🎛️ Panel de Control")
+        
         tab = st.radio(
             "Navegación:", 
             [
@@ -942,20 +942,37 @@ def main():
             ],
             index=0
         )
-        
+
+        # 📸 Imagen de usuario centrada
         if "user_picture" in st.session_state:
-            st.image(st.session_state["user_picture"], width=80)
-        
-        # ✅ Mostrar email si existe
+            st.markdown(
+                f"""
+                <div style='text-align: center; margin-top: 1rem; margin-bottom: 0.5rem;'>
+                    <img src="{st.session_state['user_picture']}" style='border-radius: 50%; width: 80px; height: 80px;'>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        # 📧 Email del usuario centrado y estilizado
         if "user_email" in st.session_state:
-            st.markdown(f"**👤 Usuario:** {st.session_state['user_email']}")
-        
+            st.markdown(
+                f"""
+                <div style='text-align: center; font-size: 0.9rem; margin-bottom: 1rem;'>
+                    <strong>👤 Usuario:</strong><br>
+                    <a href="mailto:{st.session_state['user_email']}" style='color: #3366cc;'>{st.session_state['user_email']}</a>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
         # 🔓 Logout button al final del sidebar
         if st.button("🔓 Cerrar sesión"):
-            for key in ["user_email", "just_logged_in", "token_used"]:
+            for key in ["user_email", "user_picture", "just_logged_in", "token_used"]:
                 st.session_state.pop(key, None)
             st.markdown("""<meta http-equiv="refresh" content="0; URL='/'" />""", unsafe_allow_html=True)
             st.stop()
+
 
     if tab == "🏠 Dashboard":
         # Obtener datos más recientes
