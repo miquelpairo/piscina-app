@@ -38,14 +38,11 @@ def get_logged_user_email():
     session = OAuth2Session(client_id, token=token)
     resp = session.get(userinfo_url)
 
-    st.write("🔍 Respuesta completa:", resp.status_code, resp.text)
-
     if resp.status_code != 200:
         st.error("❌ Error al obtener información del usuario.")
         st.stop()
 
     user_info = resp.json()
-    st.write("✅ userinfo:", user_info)
 
     email = user_info.get("email")
     if not email:
