@@ -36,6 +36,12 @@ def get_logged_user_email():
         session = OAuth2Session(client_id, token=token)
         resp = session.get(userinfo_url)
         user_info = resp.json()
+        
+        if resp.status_code != 200:
+            st.error(f"❌ Error al obtener info del usuario: {resp.status_code}")
+            st.write(resp.text)  # <- Esto mostrará el contenido de la respuesta
+            st.stop()
+
 
         email = user_info.get("email")
         picture = user_info.get("picture")
@@ -59,5 +65,6 @@ def get_logged_user_email():
             del st.session_state["token_used"]
             st.rerun()
         else:
+            st.write("✅ Login persistente con email:", st.session_state["user_email"])
             return st.session_state["user_email"]
         
