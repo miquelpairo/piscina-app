@@ -913,7 +913,7 @@ def main():
         st.session_state.confirm_delete = {}
     
     # 📄 Cargar las hojas de su archivo personal
-    sheet, mante_sheet, info_sheet = init_google_sheets(spreadsheet_id)
+    sheet, mant_sheet, info_sheet = init_google_sheets(spreadsheet_id)
 
     if sheet is None or mant_sheet is None:
         st.error("⚠️ No se pudo conectar con Google Sheets. Verifica la configuración.")
