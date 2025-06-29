@@ -1,5 +1,6 @@
 import streamlit as st
 from authlib.integrations.requests_client import OAuth2Session
+import urllib.parse
 
 def get_logged_user_email():
     client_id = st.secrets["google_oauth"]["client_id"]
