@@ -119,7 +119,7 @@ def init_google_sheets(spreadsheet_id):
 
         # Abrir hoja del usuario
         spreadsheet = gc.open_by_key(spreadsheet_id)
-        mediciones_sheet = spreadsheet.sheet1  # Primera hoja (por defecto)
+        main_sheet = spreadsheet.sheet1  # Primera hoja (por defecto)
 
         # Segunda hoja: Mantenimiento
         try:
@@ -165,7 +165,7 @@ def init_google_sheets(spreadsheet_id):
                     info_sheet = None
                     st.warning("⚠️ No se pudo crear la hoja Info_Piscina. Funcionalidad limitada.")
 
-        return mediciones_sheet, maintenance_sheet, info_sheet
+        return main_sheet, maintenance_sheet, info_sheet
 
     except Exception as e:
         st.error(f"❌ Error conectando con Google Sheets: {e}")
