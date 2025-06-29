@@ -4,6 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime, date, time
+import streamlit.components.v1 as components
 
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -943,17 +944,18 @@ def main():
             index=0
         )
 
-        # 📸 Imagen de usuario centrada
+        # 📸 Imagen de usuario centrada con estilos garantizados
         if "user_picture" in st.session_state:
-            st.markdown(
+            components.html(
                 f"""
                 <div style='text-align: center; margin-top: 1rem; margin-bottom: 0.5rem;'>
-                    <img src="{st.session_state['user_picture']}" style='border-radius: 50%; width: 80px; height: 80px;'>
+                    <img src="{st.session_state['user_picture']}" 
+                         style='border-radius: 50%; width: 80px; height: 80px; object-fit: cover;'>
                 </div>
                 """,
-                unsafe_allow_html=True
+                height=100
             )
-
+    
         # 📧 Email del usuario centrado y estilizado
         if "user_email" in st.session_state:
             st.markdown(
