@@ -13,11 +13,11 @@ def get_logged_user_email():
     token_url = "https://oauth2.googleapis.com/token"
     userinfo_url = "https://openidconnect.googleapis.com/v1/userinfo"
 
-    # ✅ Si ya está autenticado, devolver el email
+    # ✅ Ya autenticado
     if "user_email" in st.session_state:
         return st.session_state["user_email"]
 
-    # ✅ Si no hay código de autorización, mostrar enlace de login
+    # ✅ Si no hay código, generar enlace
     if "code" not in st.query_params:
         auth_url = (
             f"{authorize_url}?response_type=code"
@@ -30,27 +30,33 @@ def get_logged_user_email():
         st.markdown(f"[🔐 Iniciar sesión con Google]({auth_url})")
         st.stop()
 
-    # ✅ Si hay código, intercambiar por token (solo una vez)
-    code = st.query_params["code"]
-    oauth = OAuth2Session(client_id, client_secret, redirect_uri=redirect_uri, scope=scope)
-    token = oauth.fetch_token(token_url, code=code)
+    # ✅ Si hay código, intercambiar por token
+    if "token_used" not in st.session_state:
+        code = st.query_params["code"]
+        oauth = OAuth2Session(client_id, client_secret, redirect_uri=redirect_uri, scope=scope)
+        token = oauth.fetch_token(token_url, code=code)
 
-    # ✅ Consultar el endpoint oficial para obtener email
-    session = OAuth2Session(client_id, token=token)
-    resp = session.get(userinfo_url)
+        # Obtener email
+        session = OAuth2Session(client_id, token=token)
+        resp = session.get(userinfo_url)
+        if resp.status_code != 200:
+            st.error("❌ Error al obtener información del usuario.")
+            st.stop()
 
-    if resp.status_code != 200:
-        st.error("❌ Error al obtener información del usuario.")
-        st.stop()
+        user_info = resp.json()
+        email = user_info.get("email")
+        if not email:
+            st.error("❌ Google no devolvió email del usuario.")
+            st.stop()
 
-    user_info = resp.json()
-    email = user_info.get("email")
-    if not email:
-        st.error("❌ Google no devolvió email del usuario.")
-        st.stop()
+        # Guardar sesión
+        st.session_state["user_email"] = email
+        st.session_state["just_logged_in"] = True
+        st.session_state["token_used"] = True
 
-    st.session_state["user_email"] = email
-    st.session_state["just_logged_in"] = True
+        # ⚠️ Limpiar la URL
+        st.rerun()
 
-    # ✅ Limpiar la URL para evitar errores al refrescar
-    st.rerun()
+    # ❌ Si el código ya fue usado pero sigue en la URL → no volver a intentar
+    st.error("⚠️ Error al cargar sesión. Refresca sin parámetros en la URL o vuelve a iniciar sesión.")
+    st.stop()
