@@ -756,8 +756,7 @@ def calculate_chemical_amounts(volumen_litros, chemical_type, current_value, tar
 def show_chemical_calculator(volumen_litros):
     """Muestra la interfaz de la calculadora de químicos"""
     
-    st.markdown("#### 🧮 Calculadora de Químicos")
-    
+   
     if volumen_litros <= 0:
         st.warning("⚠️ Primero define el volumen de tu piscina en la pestaña **Dimensiones**")
         return
