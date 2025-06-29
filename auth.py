@@ -1,6 +1,7 @@
 import streamlit as st
 from authlib.integrations.requests_client import OAuth2Session
 import urllib.parse
+from streamlit import experimental_rerun
 
 def get_logged_user_email():
     client_id = st.secrets["google_oauth"]["client_id"]
@@ -13,11 +14,11 @@ def get_logged_user_email():
     token_url = "https://oauth2.googleapis.com/token"
     userinfo_url = "https://openidconnect.googleapis.com/v1/userinfo"
 
-    # ✅ Si ya está autenticado, devolver directamente
-    if "user_email" in st.session_state:
+    # ✅ Si ya está autenticado y la URL está limpia, devolver el email
+    if "user_email" in st.session_state and "code" not in st.query_params:
         return st.session_state["user_email"]
 
-    # ✅ Si no hay código de autorización, mostrar enlace de login
+    # 🔐 Mostrar enlace de login si aún no autorizado
     if "code" not in st.query_params:
         auth_url = (
             f"{authorize_url}?response_type=code"
@@ -30,12 +31,12 @@ def get_logged_user_email():
         st.markdown(f"[🔐 Iniciar sesión con Google]({auth_url})")
         st.stop()
 
-    # ✅ Si hay código, intercambiarlo por token (solo una vez)
+    # 🔄 Intercambiar el código por un token (solo una vez)
     code = st.query_params["code"]
     oauth = OAuth2Session(client_id, client_secret, redirect_uri=redirect_uri, scope=scope)
     token = oauth.fetch_token(token_url, code=code)
 
-    # ✅ Consultar el endpoint oficial para obtener info del usuario
+    # 📡 Obtener datos del usuario autenticado
     session = OAuth2Session(client_id, token=token)
     resp = session.get(userinfo_url)
 
@@ -49,9 +50,9 @@ def get_logged_user_email():
         st.error("❌ Google no devolvió email del usuario.")
         st.stop()
 
+    # ✅ Guardar el email en sesión
     st.session_state["user_email"] = email
     st.session_state["just_logged_in"] = True
 
-    # ✅ Limpiar la URL (elimina ?code=... y fuerza recarga limpia)
-    from streamlit import experimental_rerun
+    # 🔄 Limpiar la URL para evitar error en futuros refresh
     experimental_rerun()
