@@ -23,8 +23,7 @@ except ValueError as e:
 
 st.success(f"✅ Bienvenido, {email}")
 
-# 📄 Cargar las hojas de su archivo personal
-mediciones_sheet, mantenimiento_sheet, info_sheet = init_google_sheets(spreadsheet_id)
+
 
 # Configuración básica de la página
 st.set_page_config(
@@ -902,6 +901,8 @@ def show_chemical_calculator(volumen_litros):
         st.info(instrucciones)
         st.warning("⚠️ **Importante:** Mantener filtración 24h. Aspirar fondo después de 48h")
 
+
+
 def main():
     # Título principal mejorado
     st.markdown('<h1 class="main-title">🏊‍♂️ Control de Piscina</h1>', 
@@ -911,8 +912,8 @@ def main():
     if 'confirm_delete' not in st.session_state:
         st.session_state.confirm_delete = {}
     
-    # Inicializar Google Sheets
-    sheet, mant_sheet, info_sheet = init_google_sheets()
+    # 📄 Cargar las hojas de su archivo personal
+    sheet, mante_sheet, info_sheet = init_google_sheets(spreadsheet_id)
 
     if sheet is None or mant_sheet is None:
         st.error("⚠️ No se pudo conectar con Google Sheets. Verifica la configuración.")
