@@ -2,7 +2,6 @@ import streamlit as st
 from authlib.integrations.requests_client import OAuth2Session
 import urllib.parse
 
-
 def get_logged_user_email():
     client_id = st.secrets["google_oauth"]["client_id"]
     client_secret = st.secrets["google_oauth"]["client_secret"]
@@ -14,11 +13,11 @@ def get_logged_user_email():
     token_url = "https://oauth2.googleapis.com/token"
     userinfo_url = "https://openidconnect.googleapis.com/v1/userinfo"
 
-    # Si ya está autenticado
+    # ✅ Si ya está autenticado, devolver el email
     if "user_email" in st.session_state:
         return st.session_state["user_email"]
 
-    # Si no hay código, mostrar login
+    # ✅ Si no hay código de autorización, mostrar enlace de login
     if "code" not in st.query_params:
         auth_url = (
             f"{authorize_url}?response_type=code"
@@ -31,12 +30,12 @@ def get_logged_user_email():
         st.markdown(f"[🔐 Iniciar sesión con Google]({auth_url})")
         st.stop()
 
-    # Intercambiar código por token
+    # ✅ Si hay código, intercambiar por token (solo una vez)
     code = st.query_params["code"]
     oauth = OAuth2Session(client_id, client_secret, redirect_uri=redirect_uri, scope=scope)
     token = oauth.fetch_token(token_url, code=code)
 
-    # Obtener info del usuario
+    # ✅ Consultar el endpoint oficial para obtener email
     session = OAuth2Session(client_id, token=token)
     resp = session.get(userinfo_url)
 
@@ -46,7 +45,6 @@ def get_logged_user_email():
 
     user_info = resp.json()
     email = user_info.get("email")
-
     if not email:
         st.error("❌ Google no devolvió email del usuario.")
         st.stop()
@@ -54,5 +52,5 @@ def get_logged_user_email():
     st.session_state["user_email"] = email
     st.session_state["just_logged_in"] = True
 
-    # Limpiar la URL y recargar sin el código
+    # ✅ Limpiar la URL para evitar errores al refrescar
     st.rerun()
