@@ -1,7 +1,7 @@
 import streamlit as st
 from authlib.integrations.requests_client import OAuth2Session
 import urllib.parse
-from streamlit import experimental_rerun  # ✅ Compatible
+
 
 def get_logged_user_email():
     client_id = st.secrets["google_oauth"]["client_id"]
@@ -55,4 +55,4 @@ def get_logged_user_email():
     st.session_state["just_logged_in"] = True
 
     # Limpiar la URL y recargar sin el código
-    experimental_rerun()
+    st.rerun()
