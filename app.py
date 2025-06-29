@@ -934,7 +934,7 @@ def main():
     
     with st.sidebar:
         st.markdown("### 🎛️ Panel de Control")
-        
+
         tab = st.radio(
             "Navegación:", 
             [
@@ -944,18 +944,25 @@ def main():
             index=0
         )
 
-
-            
-
-
-    
         # 📧 Email del usuario centrado y estilizado
         if "user_email" in st.session_state:
             st.markdown(
                 f"""
-                <div style='text-align: center; font-size: 0.9rem; margin-bottom: 1rem;'>
-                    <strong>👤 Usuario1:</strong><br>
+                <div style='text-align: center; font-size: 0.9rem; margin: 1rem 0 0.5rem 0;'>
+                    <strong>👤 Usuario:</strong><br>
                     <a href="mailto:{st.session_state['user_email']}" style='color: #3366cc;'>{st.session_state['user_email']}</a>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        # 📸 Imagen centrada y circular justo encima del botón
+        if "user_picture" in st.session_state:
+            st.markdown(
+                f"""
+                <div style="display: flex; justify-content: center; margin: 0.5rem 0 1rem 0;">
+                    <img src="{st.session_state['user_picture']}" 
+                         style="border-radius: 50%; width: 80px; height: 80px; object-fit: cover;">
                 </div>
                 """,
                 unsafe_allow_html=True
@@ -967,6 +974,8 @@ def main():
                 st.session_state.pop(key, None)
             st.markdown("""<meta http-equiv="refresh" content="0; URL='/'" />""", unsafe_allow_html=True)
             st.stop()
+
+
 
 
     if tab == "🏠 Dashboard":
