@@ -944,6 +944,21 @@ def main():
             index=0
         )
 
+        # 📸 Imagen centrada y circular usando tabla (funciona mejor en sidebar)
+        if "user_picture" in st.session_state:
+            st.markdown(
+                f"""
+                <table style="margin-left: auto; margin-right: auto;">
+                    <tr>
+                        <td style="text-align: center;">
+                            <img src="{st.session_state['user_picture']}" 
+                                 style="border-radius: 50%; width: 80px; height: 80px; object-fit: cover;">
+                        </td>
+                    </tr>
+                </table>
+                """,
+                unsafe_allow_html=True
+            )
         # 📸 Imagen de usuario centrada con estilos garantizados
         if "user_picture" in st.session_state:
             st.markdown(
