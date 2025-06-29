@@ -38,11 +38,14 @@ def get_logged_user_email():
         user_info = resp.json()
 
         email = user_info.get("email")
+        picture = user_info.get("picture")
+        
         if not email:
             st.error("❌ Google no devolvió email del usuario.")
             st.stop()
 
         st.session_state["user_email"] = email
+        st.session_state["user_picture"] = picture
         st.session_state["just_logged_in"] = True
         st.session_state["token_used"] = True
 
