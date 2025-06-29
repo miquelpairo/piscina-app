@@ -7,6 +7,7 @@ def get_logged_user_email():
     client_secret = st.secrets["google_oauth"]["client_secret"]
     redirect_uri = st.secrets["google_oauth"]["redirect_uri"]
     scope = ["openid", "email", "profile"]
+    scope_str = urllib.parse.quote_plus(" ".join(scope))
 
     authorize_url = "https://accounts.google.com/o/oauth2/auth"
     token_url = "https://oauth2.googleapis.com/token"
