@@ -123,10 +123,10 @@ def init_google_sheets(spreadsheet_id):
 
         # Segunda hoja: Mantenimiento
         try:
-            mantenimiento_sheet = spreadsheet.worksheet("Mantenimiento")
+            mant_sheet = spreadsheet.worksheet("Mantenimiento")
         except:
-            mantenimiento_sheet = spreadsheet.add_worksheet(title="Mantenimiento", rows="1000", cols="6")
-            mantenimiento_sheet.append_row(["Fecha", "Tipo", "Estado_Antes", "Tiempo_Minutos", "Notas", "Proximo_Mantenimiento"])
+            mant_sheet = spreadsheet.add_worksheet(title="Mantenimiento", rows="1000", cols="6")
+            mant_sheet.append_row(["Fecha", "Tipo", "Estado_Antes", "Tiempo_Minutos", "Notas", "Proximo_Mantenimiento"])
 
         # Tercera hoja: Información de la piscina
         try:
@@ -165,7 +165,7 @@ def init_google_sheets(spreadsheet_id):
                     info_sheet = None
                     st.warning("⚠️ No se pudo crear la hoja Info_Piscina. Funcionalidad limitada.")
 
-        return mediciones_sheet, mantenimiento_sheet, info_sheet
+        return mediciones_sheet, mant_sheet, info_sheet
 
     except Exception as e:
         st.error(f"❌ Error conectando con Google Sheets: {e}")
