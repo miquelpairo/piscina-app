@@ -954,7 +954,7 @@ def main():
             st.markdown(
                 f"""
                 <div style='text-align: center; font-size: 0.9rem; margin-bottom: 1rem;'>
-                    <strong>👤 Usuario:</strong><br>
+                    <strong>👤 Usuario1:</strong><br>
                     <a href="mailto:{st.session_state['user_email']}" style='color: #3366cc;'>{st.session_state['user_email']}</a>
                 </div>
                 """,
