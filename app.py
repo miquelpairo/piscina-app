@@ -123,10 +123,10 @@ def init_google_sheets(spreadsheet_id):
 
         # Segunda hoja: Mantenimiento
         try:
-            mant_sheet = spreadsheet.worksheet("Mantenimiento")
+            maintenance_sheet = spreadsheet.worksheet("Mantenimiento")
         except:
-            mant_sheet = spreadsheet.add_worksheet(title="Mantenimiento", rows="1000", cols="6")
-            mant_sheet.append_row(["Fecha", "Tipo", "Estado_Antes", "Tiempo_Minutos", "Notas", "Proximo_Mantenimiento"])
+            maintenance_sheet = spreadsheet.add_worksheet(title="Mantenimiento", rows="1000", cols="6")
+            maintenance_sheet.append_row(["Fecha", "Tipo", "Estado_Antes", "Tiempo_Minutos", "Notas", "Proximo_Mantenimiento"])
 
         # Tercera hoja: Información de la piscina
         try:
@@ -165,7 +165,7 @@ def init_google_sheets(spreadsheet_id):
                     info_sheet = None
                     st.warning("⚠️ No se pudo crear la hoja Info_Piscina. Funcionalidad limitada.")
 
-        return mediciones_sheet, mant_sheet, info_sheet
+        return mediciones_sheet, maintenance_sheet, info_sheet
 
     except Exception as e:
         st.error(f"❌ Error conectando con Google Sheets: {e}")
@@ -206,10 +206,10 @@ def add_data_to_sheets(sheet, data):
         st.error(f"Error guardando datos: {e}")
         return False
 
-def get_maintenance_data(mant_sheet):
+def get_maintenance_data(maintenance_sheet):
     """Obtiene los datos de mantenimiento de Google Sheets"""
     try:
-        data = mant_sheet.get_all_records()
+        data = maintenance_sheet.get_all_records()
         if data:
             df = pd.DataFrame(data)
             df['Fecha'] = pd.to_datetime(df['Fecha'])
@@ -222,13 +222,13 @@ def get_maintenance_data(mant_sheet):
         st.error(f"Error obteniendo datos de mantenimiento: {e}")
         return pd.DataFrame()
 
-def clear_maintenance_alert_by_data(mant_sheet, tipo_mantenimiento, fecha_programada):
+def clear_maintenance_alert_by_data(maintenance_sheet, tipo_mantenimiento, fecha_programada):
     """
     Borra la alerta de mantenimiento buscando por tipo y fecha exacta
     """
     try:
         # Obtener todos los datos como lista de listas
-        all_data = mant_sheet.get_all_values()
+        all_data = maintenance_sheet.get_all_values()
         
         if not all_data or len(all_data) < 2:  # No hay datos o solo header
             return False
@@ -249,7 +249,7 @@ def clear_maintenance_alert_by_data(mant_sheet, tipo_mantenimiento, fecha_progra
                     
                     # Encontramos la fila, limpiar la columna F (Proximo_Mantenimiento)
                     # row_num + 1 porque Google Sheets usa índice base-1
-                    mant_sheet.update_cell(row_num + 1, 6, "")
+                    maintenance_sheet.update_cell(row_num + 1, 6, "")
                     
                     return True
         
@@ -259,10 +259,10 @@ def clear_maintenance_alert_by_data(mant_sheet, tipo_mantenimiento, fecha_progra
         st.error(f"Error borrando alerta: {e}")
         return False
 
-def add_maintenance_to_sheets(mant_sheet, data):
+def add_maintenance_to_sheets(maintenance_sheet, data):
     """Añade una nueva fila de mantenimiento a Google Sheets"""
     try:
-        mant_sheet.append_row(data)
+        maintenance_sheet.append_row(data)
         return True
     except Exception as e:
         st.error(f"Error guardando mantenimiento: {e}")
@@ -403,7 +403,7 @@ def get_chart_range(param):
     }
     return ranges.get(param, None)
 
-def analyze_alerts(df, mant_sheet=None):
+def analyze_alerts(df, maintenance_sheet=None):
     """Analiza los datos y genera alertas para el dashboard"""
     alerts = []
     
@@ -471,10 +471,10 @@ def analyze_alerts(df, mant_sheet=None):
                     'priority': 'medium'
                 })
     
-    # 4. Mantenimiento vencido (si se proporciona mant_sheet)
-    if mant_sheet:
+    # 4. Mantenimiento vencido (si se proporciona maintenance_sheet)
+    if maintenance_sheet:
         try:
-            maint_df = get_maintenance_data(mant_sheet)
+            maint_df = get_maintenance_data(maintenance_sheet)
             if not maint_df.empty and 'Proximo_Mantenimiento' in maint_df.columns:
                 
                 # Filtrar mantenimientos vencidos
@@ -913,9 +913,9 @@ def main():
         st.session_state.confirm_delete = {}
     
     # 📄 Cargar las hojas de su archivo personal
-    sheet, mant_sheet, info_sheet = init_google_sheets(spreadsheet_id)
+    sheet, maintenance_sheet, info_sheet = init_google_sheets(spreadsheet_id)
 
-    if sheet is None or mant_sheet is None:
+    if sheet is None or maintenance_sheet is None:
         st.error("⚠️ No se pudo conectar con Google Sheets. Verifica la configuración.")
         return
     
@@ -936,7 +936,7 @@ def main():
             return
         
         # Analizar alertas
-        alerts = analyze_alerts(df, mant_sheet)
+        alerts = analyze_alerts(df, maintenance_sheet)
         
         # Datos más recientes
         latest_data = df.iloc[-1]
@@ -995,7 +995,7 @@ def main():
         st.markdown("### 📅 Próximos Mantenimientos")
 
         try:
-            maintenance_df = get_maintenance_data(mant_sheet)
+            maintenance_df = get_maintenance_data(maintenance_sheet)
             
             if not maintenance_df.empty and 'Proximo_Mantenimiento' in maintenance_df.columns:
                 # Filtrar solo mantenimientos futuros
@@ -1389,7 +1389,7 @@ def main():
                         ]
                         
                         # Guardar en Google Sheets
-                        if add_maintenance_to_sheets(mant_sheet, mant_data):
+                        if add_maintenance_to_sheets(maintenance_sheet, mant_data):
                             st.success("✅ Registro guardado en Google Sheets!")
                         else:
                             st.error("❌ Error al guardar en Google Sheets")
@@ -1412,7 +1412,7 @@ def main():
             st.markdown("#### 📅 Próximos Mantenimientos Programados")
             
             try:
-                maint_df = get_maintenance_data(mant_sheet)
+                maint_df = get_maintenance_data(maintenance_sheet)
                 if not maint_df.empty and 'Proximo_Mantenimiento' in maint_df.columns:
                     # Filtrar solo mantenimientos futuros con fechas válidas
                     future_maint = maint_df[
@@ -1472,7 +1472,7 @@ def main():
                                     with col_si:
                                         if st.button("✅", key=f"confirm_yes_{delete_key}", help="Confirmar borrado"):
                                             if clear_maintenance_alert_by_data(
-                                                mant_sheet, 
+                                                maintenance_sheet, 
                                                 maint['Tipo'], 
                                                 maint['Proximo_Mantenimiento']
                                             ):
@@ -1507,7 +1507,7 @@ def main():
             st.markdown("#### 📋 Historial de Mantenimiento")
             
             # Obtener datos reales de mantenimiento
-            df_mant = get_maintenance_data(mant_sheet)
+            df_mant = get_maintenance_data(maintenance_sheet)
             
             # PRIMERO definir los filtros
             st.markdown("##### 🔍 Filtros")
@@ -1610,7 +1610,7 @@ def main():
                                     with col_si:
                                         if st.button("✅", key=f"hist_confirm_yes_{hist_delete_key}", help="Confirmar"):
                                             if clear_maintenance_alert_by_data(
-                                                mant_sheet, 
+                                                maintenance_sheet, 
                                                 maintenance_row['Tipo'], 
                                                 maintenance_row['Proximo_Mantenimiento']
                                             ):
