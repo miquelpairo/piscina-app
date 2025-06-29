@@ -22,7 +22,7 @@ def get_logged_user_email():
             f"{authorize_url}?response_type=code"
             f"&client_id={client_id}"
             f"&redirect_uri={redirect_uri}"
-            f"&scope={' '.join(scope)}"
+            f"&scope={scope_str}"
             f"&access_type=offline"
             f"&prompt=consent"
         )
