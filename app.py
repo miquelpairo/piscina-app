@@ -943,9 +943,9 @@ def main():
             index=0
         )
         
-            # ✅ Mostrar email si existe
-            if "user_email" in st.session_state:
-                st.markdown(f"**👤 Usuario:** {st.session_state['user_email']}")
+        # ✅ Mostrar email si existe
+        if "user_email" in st.session_state:
+            st.markdown(f"**👤 Usuario:** {st.session_state['user_email']}")
         
         # 🔓 Logout button al final del sidebar
         if st.button("🔓 Cerrar sesión"):
