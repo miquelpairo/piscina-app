@@ -944,7 +944,7 @@ def main():
         if st.button("🔓 Cerrar sesión"):
             for key in ["user_email", "just_logged_in", "token_used"]:
                 st.session_state.pop(key, None)
-            st.experimental_rerun()
+            st.rerun()
 
     if tab == "🏠 Dashboard":
         # Obtener datos más recientes
