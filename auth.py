@@ -13,10 +13,11 @@ def get_logged_user_email():
     token_url = "https://oauth2.googleapis.com/token"
     userinfo_url = "https://openidconnect.googleapis.com/v1/userinfo"
 
-
+    # ✅ Si ya está autenticado, devolver directamente
     if "user_email" in st.session_state:
         return st.session_state["user_email"]
 
+    # ✅ Si no hay código de autorización, mostrar enlace de login
     if "code" not in st.query_params:
         auth_url = (
             f"{authorize_url}?response_type=code"
@@ -29,12 +30,12 @@ def get_logged_user_email():
         st.markdown(f"[🔐 Iniciar sesión con Google]({auth_url})")
         st.stop()
 
-    # Autenticación y token
+    # ✅ Si hay código, intercambiarlo por token (solo una vez)
     code = st.query_params["code"]
     oauth = OAuth2Session(client_id, client_secret, redirect_uri=redirect_uri, scope=scope)
     token = oauth.fetch_token(token_url, code=code)
 
-    # Consultar el endpoint oficial
+    # ✅ Consultar el endpoint oficial para obtener info del usuario
     session = OAuth2Session(client_id, token=token)
     resp = session.get(userinfo_url)
 
@@ -43,12 +44,14 @@ def get_logged_user_email():
         st.stop()
 
     user_info = resp.json()
-
     email = user_info.get("email")
     if not email:
         st.error("❌ Google no devolvió email del usuario.")
         st.stop()
 
     st.session_state["user_email"] = email
-    st.session_state["just_logged_in"] = True  # ✅ Marcar que acaba de iniciar sesión
-    return email
+    st.session_state["just_logged_in"] = True
+
+    # ✅ Limpiar la URL (elimina ?code=... y fuerza recarga limpia)
+    from streamlit import experimental_rerun
+    experimental_rerun()
