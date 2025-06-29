@@ -13,11 +13,11 @@ def get_logged_user_email():
     token_url = "https://oauth2.googleapis.com/token"
     userinfo_url = "https://openidconnect.googleapis.com/v1/userinfo"
 
-    # ✅ Ya autenticado
+    # Si ya tiene el email en sesión, devolver
     if "user_email" in st.session_state:
         return st.session_state["user_email"]
 
-    # ✅ Mostrar botón login
+    # Si no hay código en la URL, mostrar el botón de login
     if "code" not in st.query_params:
         auth_url = (
             f"{authorize_url}?response_type=code"
@@ -30,33 +30,35 @@ def get_logged_user_email():
         st.markdown(f"[🔐 Iniciar sesión con Google]({auth_url})")
         st.stop()
 
-    # ✅ Usar código solo una vez
-    if "token_used" not in st.session_state:
+    # Si hay código Y no ha sido procesado, obtener token y email
+    if "token_obtained" not in st.session_state:
         code = st.query_params["code"]
         oauth = OAuth2Session(client_id, client_secret, redirect_uri=redirect_uri, scope=scope)
-        token = oauth.fetch_token(token_url, code=code)
 
-        # Obtener email del usuario
-        session = OAuth2Session(client_id, token=token)
-        resp = session.get(userinfo_url)
-        user_info = resp.json()
+        try:
+            token = oauth.fetch_token(token_url, code=code)
+            session = OAuth2Session(client_id, token=token)
+            resp = session.get(userinfo_url)
+            user_info = resp.json()
 
-        email = user_info.get("email")
-        if not email:
-            st.error("❌ Google no devolvió email del usuario.")
+            email = user_info.get("email")
+            if not email:
+                st.error("❌ Google no devolvió email del usuario.")
+                st.stop()
+
+            # Guardar en sesión
+            st.session_state["user_email"] = email
+            st.session_state["just_logged_in"] = True
+            st.session_state["token_obtained"] = True
+
+            # Mostrar botón de recarga sin ?code
+            st.markdown("✅ Autenticación completada. [Haz clic aquí para continuar](./)")
             st.stop()
 
-        # Guardar en sesión
-        st.session_state["user_email"] = email
-        st.session_state["just_logged_in"] = True
-        st.session_state["token_used"] = True
+        except Exception as e:
+            st.error(f"❌ Error al autenticar: {e}")
+            st.stop()
 
-        # ✅ Redirigir manualmente limpiando la URL
-        st.markdown("""
-            <meta http-equiv="refresh" content="0; URL='/'" />
-        """, unsafe_allow_html=True)
-        st.stop()
-    else:
-        st.error("❌ Código de autorización ya usado. Por favor vuelve a iniciar sesión.")
-        st.markdown(f"[🔐 Reintentar iniciar sesión]({redirect_uri})")
-        st.stop()
+    # Si ya usó el código, pero la URL aún tiene ?code, pedir recarga
+    st.markdown("🔁 Código ya usado. [Haz clic aquí para continuar](./)")
+    st.stop()
