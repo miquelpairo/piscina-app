@@ -13,7 +13,7 @@ def show_login_screen():
         if st.button("➡️ Iniciar sesión con Google"):
             st.session_state["login_requested"] = True
             st.stop()  # ← IMPORTANTE: detenemos aquí para evitar crash
-            st.rerun()
+            st.experimental_rerun()
 
     with col2:
         if st.button("➕ Crear nueva cuenta"):
