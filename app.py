@@ -6,16 +6,26 @@ from plotly.subplots import make_subplots
 from datetime import datetime, date, time
 import streamlit.components.v1 as components
 
+
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 from auth import get_logged_user_email
 from user_lookup import get_user_spreadsheet_id
 
-# 🔐 Autenticación por Google OAuth
+from login import show_login_screen  # 👈 al principio de app.py
+
+# 🔐 Autenticación visual con login.py
 if "user_email" not in st.session_state:
-    email = get_logged_user_email()
-    st.stop()  # ⛔️ Muy importante para detener aquí tras login
+    if st.session_state.get("show_registration_form"):
+        st.warning("⚠️ Aquí irá el formulario de alta de nuevo usuario.")  # 👈 temporal
+        st.stop()
+    elif st.session_state.get("auth_request"):
+        email = get_logged_user_email()
+        st.stop()
+    else:
+        show_login_screen()
+        st.stop()
 else:
     email = st.session_state["user_email"]
 
