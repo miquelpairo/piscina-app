@@ -11,8 +11,7 @@ def show_login_screen():
     col1, col2 = st.columns(2)
     with col1:
         if st.button("➡️ Iniciar sesión con Google"):
-            st.session_state["login_requested"] = True
-            st.stop()  # ← IMPORTANTE: detenemos aquí para evitar crash
+            st.session_state["auth_requested"] = True
             st.experimental_rerun()
 
     with col2:
