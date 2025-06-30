@@ -10,10 +10,11 @@ import streamlit.components.v1 as components
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
+from login import show_login_screen  # 👈 al principio de app.py
 from auth import get_logged_user_email
 from user_lookup import get_user_spreadsheet_id
 
-from login import show_login_screen  # 👈 al principio de app.py
+
 
 # 🔐 Autenticación visual con login.py
 if "user_email" not in st.session_state:
