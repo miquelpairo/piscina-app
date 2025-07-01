@@ -8,7 +8,7 @@ from datetime import datetime, date, time
 import streamlit.components.v1 as components
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from auth_simple import handle_authentication
+from auth_fixed import process_oauth_code, show_login_screen
 from user_lookup import get_user_spreadsheet_id
 
 # Configuración de la página
@@ -18,19 +18,28 @@ st.set_page_config(
     layout="wide"
 )
 
-# Manejar autenticación
-email = handle_authentication()
+# ✅ LÓGICA CORREGIDA - Verificar en este orden:
 
-if not email:
-    st.stop()  # La función handle_authentication ya muestra la UI necesaria
+# 1️⃣ PRIMERO: ¿Hay código OAuth en query params?
+query_params = st.query_params.to_dict()
+if "code" in query_params and "oauth_processed" not in st.session_state:
+    st.write("🔄 Procesando credenciales OAuth...")
+    email = process_oauth_code(query_params["code"])
+    if email:
+        st.session_state["user_email"] = email
+        st.session_state["just_logged_in"] = True
+        st.session_state["oauth_processed"] = True
+        st.query_params.clear()
+        st.rerun()
 
-# Usuario autenticado
-st.title("🏊‍♂️ Control Piscina")
-
-# Mostrar mensaje de bienvenida solo una vez
-if st.session_state.get("just_logged_in"):
-    st.success(f"✅ Bienvenido, {email}")
-    del st.session_state["just_logged_in"]
+# 2️⃣ SEGUNDO: ¿Usuario ya autenticado en session_state?
+if "user_email" in st.session_state:
+    email = st.session_state["user_email"]
+    
+    # Mostrar mensaje de bienvenida solo una vez
+    if st.session_state.get("just_logged_in"):
+        st.success(f"✅ Bienvenido, {email}")
+        del st.session_state["just_logged_in"]
 
 
 
