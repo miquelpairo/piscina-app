@@ -47,16 +47,6 @@ if "user_email" in st.session_state:
         st.error(str(e))
         st.stop()
     
-    # Botón de logout en sidebar
-    with st.sidebar:
-        st.markdown("---")
-        st.write(f"👤 {email}")
-        if st.button("🚪 Logout"):
-            keys_to_remove = ["user_email", "user_picture", "just_logged_in", "oauth_processed"]
-            for key in keys_to_remove:
-                if key in st.session_state:
-                    del st.session_state[key]
-            st.rerun()
     
     # ✅ AQUÍ EMPIEZA TU APP PRINCIPAL (CSS y contenido)
     
