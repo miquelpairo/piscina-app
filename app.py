@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -11,7 +10,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 from auth_fixed import process_oauth_code, show_login_screen
 from user_lookup import get_user_spreadsheet_id
 
-# Configuración de la página
+# ✅ SOLO UN st.set_page_config - AL INICIO
 st.set_page_config(
     page_title="Control Piscina",
     page_icon="🏊‍♂️",
@@ -40,91 +39,94 @@ if "user_email" in st.session_state:
     if st.session_state.get("just_logged_in"):
         st.success(f"✅ Bienvenido, {email}")
         del st.session_state["just_logged_in"]
+    
+    # Buscar spreadsheet_id
+    try:
+        spreadsheet_id = get_user_spreadsheet_id(email)
+    except ValueError as e:
+        st.error(str(e))
+        st.stop()
+    
+    # Botón de logout en sidebar
+    with st.sidebar:
+        st.markdown("---")
+        st.write(f"👤 {email}")
+        if st.button("🚪 Logout"):
+            keys_to_remove = ["user_email", "user_picture", "just_logged_in", "oauth_processed"]
+            for key in keys_to_remove:
+                if key in st.session_state:
+                    del st.session_state[key]
+            st.rerun()
+    
+    # ✅ AQUÍ EMPIEZA TU APP PRINCIPAL (CSS y contenido)
+    
+    # CSS personalizado para mejorar la apariencia
+    st.markdown("""
+    <style>
+        .stApp {
+            background: linear-gradient(to bottom right, #f8f9fa 0%, #ffffff 100%);
+        }
+        
+        .metric-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 10px 0;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .status-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .status-optimal { background-color: #28a745; }
+        .status-warning { background-color: #ffc107; }
+        .status-critical { background-color: #dc3545; }
+        
+        .stButton > button {
+            background: linear-gradient(to top right, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 25px;
+            color: white;
+            font-weight: bold;
+            padding: 0.5rem 2rem;
+            box-shadow: 0 4px 15px 0 rgba(116, 79, 168, 0.3);
+        }
+        
+        .dashboard-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            padding: 25px;
+            margin: 15px 0;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+        }
+        
+        .big-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #212529;
+        }
+        
+        .status-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-top: 5px;
+            color: #212529;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
-
-
-
-
-# 🔎 Buscar en la hoja maestra el spreadsheet_id asignado al email
-try:
-    spreadsheet_id = get_user_spreadsheet_id(email)
-except ValueError as e:
-    st.error(str(e))
+else:
+    # 3️⃣ ✅ ÚLTIMO RECURSO: Mostrar pantalla de login
+    show_login_screen()
     st.stop()
-
-
-
-
-
-# Configuración básica de la página
-st.set_page_config(
-    page_title="Control de piscina",
-    page_icon="💧",
-    layout="wide"
-)
-
-# CSS personalizado para mejorar la apariencia
-st.markdown("""
-<style>
-    .stApp {
-        background: linear-gradient(to bottom right, #f8f9fa 0%, #ffffff 100%);
-    }
-    
-    .metric-card {
-        background: rgba(255, 255, 255, 0.9);
-        border-radius: 15px;
-        padding: 20px;
-        margin: 10px 0;
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
-        text-align: center;
-    }
-    
-    .status-indicator {
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        display: inline-block;
-        margin-right: 8px;
-    }
-    
-    .status-optimal { background-color: #28a745; }
-    .status-warning { background-color: #ffc107; }
-    .status-critical { background-color: #dc3545; }
-    
-    .stButton > button {
-        background: linear-gradient(to top right, #667eea 0%, #764ba2 100%);
-        border: none;
-        border-radius: 25px;
-        color: white;
-        font-weight: bold;
-        padding: 0.5rem 2rem;
-        box-shadow: 0 4px 15px 0 rgba(116, 79, 168, 0.3);
-    }
-    
-    .dashboard-card {
-        background: rgba(255, 255, 255, 0.9);
-        border-radius: 20px;
-        padding: 25px;
-        margin: 15px 0;
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
-    }
-    
-    .big-number {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: #212529;
-    }
-    
-    .status-text {
-        font-size: 1.1rem;
-        font-weight: 600;
-        margin-top: 5px;
-        color: #212529;
-    }
-</style>
-""", unsafe_allow_html=True)
 
 # Configuración de Google Sheets
 @st.cache_resource
