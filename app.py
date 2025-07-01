@@ -1344,7 +1344,7 @@ def main():
         pregunta_usuario = st.text_area(
             "Haz una pregunta específica a la IA:",
             placeholder="Ej: ¿Por qué el pH está bajando? ¿Cuándo debo cambiar el filtro? ¿El cloro está bien para esta época?",
-            height=60,
+            height=80,
             help="Deja vacío para análisis automático, o escribe una pregunta específica"
         )
         
