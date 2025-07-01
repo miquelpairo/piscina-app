@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 from authlib.integrations.requests_client import OAuth2Session
 import urllib.parse
 
@@ -90,43 +91,56 @@ def _show_login_screen():
         </div>
     """, unsafe_allow_html=True)
     
+    # Solución con st.components para JavaScript directo
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
-        # SOLUCIÓN: HTML puro con target="_self" para forzar misma pestaña
-        st.markdown(f"""
+        # Usar components.html para JavaScript real
+        components.html(f"""
             <div style="text-align: center; margin: 20px 0;">
-                <a href="{auth_url}" target="_self" style="
-                    display: inline-block;
+                <button id="googleLogin" style="
                     background: linear-gradient(90deg, #4285f4, #34a853);
                     color: white;
-                    padding: 12px 24px;
-                    text-decoration: none;
+                    border: none;
+                    padding: 15px 30px;
                     border-radius: 8px;
                     font-weight: bold;
                     font-size: 16px;
+                    cursor: pointer;
                     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
                     transition: all 0.3s ease;
-                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.3)';" 
-                   onmouseout="this.style.transform='translateY(0px)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.2)';">
-                    🔗 Iniciar sesión con Google
-                </a>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        # Opción adicional con JavaScript más agresivo
-        st.markdown(f"""
-            <div style="text-align: center; margin: 10px 0;">
-                <button onclick="window.location.replace('{auth_url}')" style="
-                    background: #ea4335;
-                    color: white;
-                    border: none;
-                    padding: 10px 20px;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    font-size: 14px;
+                    width: 100%;
                 ">
-                    🚀 Forzar redirección
+                    🔗 Iniciar sesión con Google
                 </button>
             </div>
-        """, unsafe_allow_html=True)
+            
+            <script>
+                document.getElementById('googleLogin').addEventListener('click', function() {{
+                    // Redirigir en la misma ventana/pestaña
+                    window.location.href = "{auth_url}";
+                }});
+                
+                // Hover effects
+                document.getElementById('googleLogin').addEventListener('mouseover', function() {{
+                    this.style.transform = 'translateY(-2px)';
+                    this.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+                }});
+                
+                document.getElementById('googleLogin').addEventListener('mouseout', function() {{
+                    this.style.transform = 'translateY(0px)';
+                    this.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+                }});
+            </script>
+        """, height=100)
+        
+        # Backup option - enlace directo simple
+        st.markdown("---")
+        st.markdown("**Si el botón no funciona, usa este enlace:**")
+        st.markdown(f"[Hacer clic aquí para login]({auth_url})")
+        
+        # Option adicional - mostrar URL para copiar/pegar
+        with st.expander("🔧 Opciones avanzadas"):
+            st.write("**URL de autenticación:**")
+            st.code(auth_url)
+            st.write("*Puedes copiar y pegar esta URL en la misma pestaña*")
