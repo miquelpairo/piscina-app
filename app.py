@@ -6,6 +6,7 @@ from plotly.subplots import make_subplots
 from datetime import datetime, date, time
 import streamlit.components.v1 as components
 import gspread
+import google.generativeai as genai
 from oauth2client.service_account import ServiceAccountCredentials
 from auth_fixed import process_oauth_code, show_login_screen
 from user_lookup import get_user_spreadsheet_id
@@ -301,6 +302,85 @@ RANGES = {
     'FAC': {'min': 1.0, 'max': 3.0, 'unit': 'ppm', 'icon': '🟢'},
     'Temperatura': {'min': 22, 'max': 32, 'unit': '°C', 'icon': '🌡️'}
 }
+
+# ============================================================================
+# 🤖 ANÁLISIS CON IA - GOOGLE GEMINI
+# ============================================================================
+
+@st.cache_data(ttl=300)  # Cache por 5 minutos
+def configurar_gemini():
+    """Configura Google Gemini con la API key"""
+    try:
+        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+        return genai.GenerativeModel('gemini-pro')
+    except Exception as e:
+        st.error(f"Error configurando Gemini: {e}")
+        return None
+
+def analizar_tendencias_piscina(df):
+    """Analiza tendencias de la piscina usando Google Gemini"""
+    
+    # Configurar Gemini
+    model = configurar_gemini()
+    if model is None:
+        return "❌ Error: No se pudo conectar con la IA"
+    
+    if df.empty:
+        return "📊 No hay datos suficientes para análizar"
+    
+    try:
+        # Preparar resumen de datos para la IA
+        latest_data = df.tail(10)  # Últimas 10 mediciones
+        
+        # Estadísticas básicas
+        stats_resumen = []
+        for param in ['pH', 'Sal', 'FAC', 'ORP', 'Conductividad', 'TDS', 'Temperatura']:
+            if param in df.columns:
+                current = df[param].iloc[-1]
+                avg_last_5 = df[param].tail(5).mean()
+                trend = "📈 subiendo" if current > avg_last_5 else "📉 bajando" if current < avg_last_5 else "➡️ estable"
+                
+                stats_resumen.append(f"• {param}: {current} (promedio últimas 5: {avg_last_5:.1f}) - {trend}")
+        
+        # Datos de las últimas mediciones en formato texto
+        datos_texto = latest_data[['Dia', 'pH', 'Sal', 'FAC', 'ORP', 'Conductividad', 'TDS', 'Temperatura']].to_string(index=False)
+        
+        # Crear prompt optimizado
+        prompt = f"""
+Eres un experto en mantenimiento de piscinas con clorador salino. Analiza estos datos:
+
+DATOS RECIENTES:
+{datos_texto}
+
+TENDENCIAS OBSERVADAS:
+{chr(10).join(stats_resumen)}
+
+RANGOS ÓPTIMOS:
+• pH: 7.2-7.6
+• Sal: 2700-4500 ppm  
+• FAC: 1.0-3.0 ppm
+• ORP: 650-750 mV
+• Conductividad: 4000-8000 µS/cm
+• TDS: 2000-4500 ppm
+• Temperatura: 22-32°C
+
+Proporciona un análisis conciso (máximo 200 palabras) con:
+
+🎯 **ESTADO ACTUAL** (1-2 líneas)
+📊 **TENDENCIAS CLAVE** (problemas/mejoras detectadas)
+⚠️ **ALERTAS** (parámetros críticos)
+💡 **RECOMENDACIONES** (3 acciones prioritarias específicas)
+
+Respuesta práctica y directa para propietario de piscina.
+        """
+        
+        # Generar análisis
+        response = model.generate_content(prompt)
+        return response.text
+        
+    except Exception as e:
+        return f"❌ Error en el análisis: {str(e)}"
+
 
 def check_parameter_status(value, param):
     """Verifica si un parámetro está en rango óptimo"""
@@ -1023,6 +1103,33 @@ def main():
             display_alerts(alerts)
         else:
             st.success("✅ No hay alertas. ¡Tu piscina está en perfecto estado!")
+
+       # 🤖 ANÁLISIS INTELIGENTE CON IA
+        # ============================================================================
+        st.markdown("---")
+        st.markdown("### 🤖 Análisis Inteligente")
+        
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            if st.button("🔍 Analizar Tendencias con IA", type="primary", use_container_width=True):
+                with st.spinner("🤖 Analizando datos con Inteligencia Artificial..."):
+                    analisis = analizar_tendencias_piscina(df)
+                    
+                    st.markdown("#### 📋 Análisis de Tendencias")
+                    st.markdown(f"""
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                               border-radius: 15px; padding: 20px; margin: 10px 0;
+                               border: 1px solid rgba(255, 255, 255, 0.2);
+                               box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);">
+                        <div style="color: white; line-height: 1.6;">
+                            {analisis.replace(chr(10), '<br>')}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    st.info("💡 **Tip:** El análisis se actualiza cada 5 minutos automáticamente")
+        
+        st.markdown("---")
 
         # Resumen general
         st.markdown("### 🎯 Resumen del Estado")
