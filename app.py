@@ -312,7 +312,8 @@ def configurar_gemini():
     """Configura Google Gemini con la API key"""
     try:
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-        return genai.GenerativeModel('gemini-pro')
+        # Usar el modelo correcto disponible
+        return genai.GenerativeModel('gemini-1.5-flash')
     except Exception as e:
         st.error(f"Error configurando Gemini: {e}")
         return None
@@ -1011,7 +1012,7 @@ def test_gemini_connection():
             return "❌ No se encontró GEMINI_API_KEY en secrets"
         
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('gemini-1.5-pro')
         response = model.generate_content("Di hola mundo")
         return f"✅ Conectado correctamente: {response.text[:50]}..."
     except Exception as e:
