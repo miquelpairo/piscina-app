@@ -16,7 +16,10 @@ def handle_authentication():
     query_params = st.query_params.to_dict()
     
     if "code" in query_params:
-        return _process_oauth_callback(query_params["code"])
+        # Procesar inmediatamente y devolver el resultado
+        email = _process_oauth_callback(query_params["code"])
+        if email:
+            return email
     
     # No está autenticado, mostrar pantalla de login
     _show_login_screen()
@@ -30,32 +33,37 @@ def _process_oauth_callback(code):
         redirect_uri = st.secrets["google_oauth"]["redirect_uri"]
         scope = ["openid", "email", "profile"]
         
-        # Intercambiar código por token
-        oauth = OAuth2Session(client_id, client_secret, redirect_uri=redirect_uri, scope=scope)
-        token = oauth.fetch_token("https://oauth2.googleapis.com/token", code=code)
-        
-        # Obtener información del usuario
-        session = OAuth2Session(client_id, token=token)
-        resp = session.get("https://openidconnect.googleapis.com/v1/userinfo")
-        user_info = resp.json()
-        
-        email = user_info.get("email")
-        picture = user_info.get("picture")
-        
-        if email:
-            # Guardar en session_state
-            st.session_state["user_email"] = email
-            st.session_state["user_picture"] = picture
-            st.session_state["just_logged_in"] = True
+        # Mostrar spinner mientras procesamos
+        with st.spinner("🔄 Procesando autenticación..."):
+            # Intercambiar código por token
+            oauth = OAuth2Session(client_id, client_secret, redirect_uri=redirect_uri, scope=scope)
+            token = oauth.fetch_token("https://oauth2.googleapis.com/token", code=code)
             
-            # Limpiar query params
-            st.query_params.clear()
+            # Obtener información del usuario
+            session = OAuth2Session(client_id, token=token)
+            resp = session.get("https://openidconnect.googleapis.com/v1/userinfo")
+            user_info = resp.json()
             
-            return email
-        else:
-            st.error("❌ No se pudo obtener el email del usuario.")
-            return None
+            email = user_info.get("email")
+            picture = user_info.get("picture")
             
+            if email:
+                # Guardar en session_state
+                st.session_state["user_email"] = email
+                st.session_state["user_picture"] = picture
+                st.session_state["just_logged_in"] = True
+                
+                # Limpiar query params inmediatamente
+                st.query_params.clear()
+                
+                # Forzar rerun para actualizar la UI
+                st.rerun()
+                
+            else:
+                st.error("❌ No se pudo obtener el email del usuario.")
+                st.query_params.clear()
+                return None
+                
     except Exception as e:
         st.error(f"❌ Error durante la autenticación: {str(e)}")
         st.query_params.clear()
@@ -88,9 +96,11 @@ def _show_login_screen():
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
-        # Botón que redirige directamente
-        st.link_button(
-            "🔗 Iniciar sesión con Google",
-            auth_url,
-            use_container_width=True
-        )
+        if st.button("🔗 Iniciar sesión con Google", use_container_width=True, type="primary"):
+            # Redirigir en la misma pestaña usando JavaScript
+            st.markdown(f"""
+                <script>
+                    window.location.href = "{auth_url}";
+                </script>
+            """, unsafe_allow_html=True)
+            st.stop()
