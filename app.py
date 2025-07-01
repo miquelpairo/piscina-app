@@ -1325,7 +1325,7 @@ def main():
                     data_row = [
                         fecha.strftime('%Y-%m-%d'),
                         hora.strftime('%H:%M'),
-                        ph_norm, conductividad_norm, tds_norm, sal_norm, orp_norm, fac_norm, temperatura_norm
+                        ph_norm, conductividad_norm, tds_norm, sal_norm, orp_norm, fac_norm, temperatura_norm,
                         notas_medicion  # Nueva columna de notas
                     ]
                     
