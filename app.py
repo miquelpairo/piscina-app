@@ -319,7 +319,7 @@ def configurar_gemini():
         return None
 
 def analizar_tendencias_piscina(df):
-    """Analiza tendencias de la piscina usando Google Gemini"""
+    """Analiza tendencias de la piscina usando Google Gemini con contexto de notas"""
     
     # Configurar Gemini
     model = configurar_gemini()
@@ -330,8 +330,8 @@ def analizar_tendencias_piscina(df):
         return "📊 No hay datos suficientes para análizar"
     
     try:
-        # Preparar resumen de datos para la IA
-        latest_data = df.tail(10)  # Últimas 10 mediciones
+        # Preparar datos de las últimas 10 mediciones
+        latest_data = df.tail(10)
         
         # Estadísticas básicas
         stats_resumen = []
@@ -343,36 +343,55 @@ def analizar_tendencias_piscina(df):
                 
                 stats_resumen.append(f"• {param}: {current} (promedio últimas 5: {avg_last_5:.1f}) - {trend}")
         
-        # Datos de las últimas mediciones en formato texto
-        datos_texto = latest_data[['Dia', 'pH', 'Sal', 'FAC', 'ORP', 'Conductividad', 'TDS', 'Temperatura']].to_string(index=False)
+        # Preparar datos con notas para la IA
+        datos_con_contexto = []
+        for _, row in latest_data.iterrows():
+            fecha_str = row['Dia'].strftime('%d/%m/%Y')
+            linea_datos = f"{fecha_str}: pH={row['pH']}, Sal={row['Sal']}, FAC={row['FAC']}, ORP={row['ORP']}"
+            
+            # Agregar notas si existen
+            if 'Notas' in row and pd.notna(row['Notas']) and row['Notas'].strip():
+                linea_datos += f" | NOTAS: {row['Notas']}"
+            
+            datos_con_contexto.append(linea_datos)
         
-        # Crear prompt optimizado
+        # Crear contexto de notas importantes
+        notas_importantes = []
+        if 'Notas' in latest_data.columns:
+            for _, row in latest_data.iterrows():
+                if pd.notna(row['Notas']) and row['Notas'].strip():
+                    fecha_nota = row['Dia'].strftime('%d/%m')
+                    notas_importantes.append(f"• {fecha_nota}: {row['Notas']}")
+        
+        contexto_notas = "\n".join(notas_importantes) if notas_importantes else "No hay notas registradas"
+        
+        # Crear prompt mejorado con contexto
         prompt = f"""
 Eres un experto en mantenimiento de piscinas con clorador salino. Analiza estos datos:
 
-DATOS RECIENTES:
-{datos_texto}
+DATOS RECIENTES CON CONTEXTO:
+{chr(10).join(datos_con_contexto)}
 
 TENDENCIAS OBSERVADAS:
 {chr(10).join(stats_resumen)}
 
+NOTAS DEL PROPIETARIO (contexto importante):
+{contexto_notas}
+
 RANGOS ÓPTIMOS:
-• pH: 7.2-7.6
-• Sal: 2700-4500 ppm  
-• FAC: 1.0-3.0 ppm
-• ORP: 650-750 mV
-• Conductividad: 4000-8000 µS/cm
-• TDS: 2000-4500 ppm
-• Temperatura: 22-32°C
+• pH: 7.2-7.6 | Sal: 2700-4500 ppm | FAC: 1.0-3.0 ppm
+• ORP: 650-750 mV | Conductividad: 4000-8000 µS/cm | TDS: 2000-4500 ppm
 
-Proporciona un análisis conciso (máximo 200 palabras) con:
+Considera las NOTAS del propietario para entender cambios en los parámetros (lluvia, mantenimiento, etc.).
 
-🎯 **ESTADO ACTUAL** (1-2 líneas)
-📊 **TENDENCIAS CLAVE** (problemas/mejoras detectadas)
+Proporciona análisis conciso (máximo 250 palabras) con:
+
+🎯 **ESTADO ACTUAL** (considerando contexto de notas)
+📊 **TENDENCIAS CLAVE** (relaciona cambios con las notas)
 ⚠️ **ALERTAS** (parámetros críticos)
-💡 **RECOMENDACIONES** (3 acciones prioritarias específicas)
+💡 **RECOMENDACIONES** (3 acciones específicas basadas en datos y notas)
 
-Respuesta práctica y directa para propietario de piscina.
+Respuesta práctica para propietario de piscina.
         """
         
         # Generar análisis
@@ -1240,6 +1259,15 @@ def main():
                 orp = st.number_input("ORP (mV)", min_value=0, value=700, step=10)
                 fac = st.number_input("FAC (ppm)", min_value=0.0, max_value=10.0, value=0.5, step=0.1)
                 temperatura = st.number_input("Temperatura (°C)", min_value=0.0, max_value=50.0, value=25.0, step=0.5)
+                
+                st.markdown("#### 📝 Notas (Opcional)")
+                notas_medicion = st.text_area(
+                    "Observaciones", 
+                    placeholder="Ej: Después de lluvia, muchos bañistas, añadido cloro shock, limpiado filtro...",
+                    height=80,
+                    help="Información adicional que puede ayudar al análisis"
+                )
+        
         
         # Vista previa del estado
         st.markdown("### 🚦 Vista Previa del Estado")
@@ -1298,6 +1326,7 @@ def main():
                         fecha.strftime('%Y-%m-%d'),
                         hora.strftime('%H:%M'),
                         ph_norm, conductividad_norm, tds_norm, sal_norm, orp_norm, fac_norm, temperatura_norm
+                        notas_medicion  # Nueva columna de notas
                     ]
                     
                     if add_data_to_sheets(main_sheet, data_row):
