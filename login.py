@@ -1,4 +1,5 @@
 import streamlit as st
+from auth import get_google_auth_url
 
 def show_login_screen():
     st.markdown("""
@@ -9,10 +10,12 @@ def show_login_screen():
     """, unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
+
     with col1:
         if st.button("➡️ Iniciar sesión con Google"):
-            st.session_state["auth_request"] = True
-            st.rerun()
+            auth_url = get_google_auth_url()
+            st.markdown(f"""<meta http-equiv="refresh" content="0; URL='{auth_url}'" />""", unsafe_allow_html=True)
+            st.stop()
 
     with col2:
         if st.button("➕ Crear nueva cuenta"):
