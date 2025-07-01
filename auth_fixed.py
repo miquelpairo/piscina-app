@@ -79,6 +79,22 @@ def show_login_screen():
         <div style="text-align: center; margin-top: 2rem;">
             <h1 style="color: #2c3e50;">🔐 Acceso a Control Piscina</h1>
             <p style="color: #7f8c8d;">Elige una opción de login para probar</p>
+            
+            <!-- 🚨 IDENTIFICADOR DE VERSIÓN - SI VES ESTO, ESTÁ ACTUALIZADO 🚨 -->
+            <div style="
+                background: linear-gradient(45deg, #ff6b6b, #4ecdc4); 
+                color: white; 
+                padding: 15px; 
+                border-radius: 10px; 
+                margin: 20px 0; 
+                font-weight: bold;
+                font-size: 18px;
+                border: 3px solid #ffffff;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            ">
+                ✅ VERSIÓN ACTUALIZADA - MARZO 2025 ✅<br>
+                🎯 Si ves esta caja de colores, el código está bien implementado
+            </div>
         </div>
     """, unsafe_allow_html=True)
     
