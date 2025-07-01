@@ -61,7 +61,7 @@ def show_login_screen():
             border-radius: 10px;
             margin: 20px 0;
         ">
-            <h1>🔐 Control Piscina</h1>
+            <h1>🔐 Pool Master</h1>
             <p>Accede con tu cuenta de Google o crea una nueva</p>
         </div>
     """, unsafe_allow_html=True)
@@ -90,10 +90,6 @@ def show_login_screen():
             st.session_state["show_signup_form"] = True
             st.rerun()
             
-        # Debug: Mostrar la URL para verificar
-        with st.expander("🔧 Debug - Verificar URL"):
-            st.code(auth_url)
-            st.write("**Redirect URI configurada:**", redirect_uri)
     
     # Mostrar formulario de registro si se activó
     if st.session_state.get("show_signup_form"):
