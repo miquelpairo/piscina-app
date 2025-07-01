@@ -24,7 +24,6 @@ def process_oauth_code(code):
         picture = user_info.get("picture")
         
         if email:
-            # Guardar también la foto si está disponible
             if picture:
                 st.session_state["user_picture"] = picture
             return email
@@ -37,133 +36,128 @@ def process_oauth_code(code):
         return None
 
 def show_login_screen():
-    """Muestra la pantalla de login con comunicación entre pestañas"""
+    """Muestra múltiples opciones de login para probar cuál funciona"""
     client_id = st.secrets["google_oauth"]["client_id"]
     redirect_uri = st.secrets["google_oauth"]["redirect_uri"]
     scope = ["openid", "email", "profile"]
     scope_str = urllib.parse.quote_plus(" ".join(scope))
     
-    auth_url = (
-        f"https://accounts.google.com/o/oauth2/auth?response_type=code"
-        f"&client_id={client_id}"
-        f"&redirect_uri={redirect_uri}"
-        f"&scope={scope_str}"
-        f"&access_type=offline"
-        f"&prompt=consent"
+    # 🧪 DIFERENTES VERSIONES DE URL PARA PROBAR:
+    
+    # Versión 1: MÍNIMA (sin parámetros restrictivos)
+    auth_url_minimal = (
+        f"https://accounts.google.com/o/oauth2/auth?"
+        f"response_type=code&"
+        f"client_id={client_id}&"
+        f"redirect_uri={redirect_uri}&"
+        f"scope={scope_str}"
+    )
+    
+    # Versión 2: CON SELECT_ACCOUNT (menos restrictivo que consent)
+    auth_url_select = (
+        f"https://accounts.google.com/o/oauth2/auth?"
+        f"response_type=code&"
+        f"client_id={client_id}&"
+        f"redirect_uri={redirect_uri}&"
+        f"scope={scope_str}&"
+        f"prompt=select_account"
+    )
+    
+    # Versión 3: ORIGINAL (con todos los parámetros)
+    auth_url_full = (
+        f"https://accounts.google.com/o/oauth2/auth?"
+        f"response_type=code&"
+        f"client_id={client_id}&"
+        f"redirect_uri={redirect_uri}&"
+        f"scope={scope_str}&"
+        f"access_type=offline&"
+        f"prompt=consent"
     )
     
     # UI de login
     st.markdown("""
-        <div style="text-align: center; margin-top: 3rem;">
+        <div style="text-align: center; margin-top: 2rem;">
             <h1 style="color: #2c3e50;">🔐 Acceso a Control Piscina</h1>
-            <p style="color: #7f8c8d;">Inicia sesión con tu cuenta de Google</p>
+            <p style="color: #7f8c8d;">Elige una opción de login para probar</p>
         </div>
     """, unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns([1, 2, 1])
+    # Mostrar información de debug
+    with st.expander("🔍 Debug Info - URLs generadas"):
+        st.write("**Redirect URI configurada:**", redirect_uri)
+        st.write("**URL Mínima:**", auth_url_minimal)
+        st.write("**URL Select Account:**", auth_url_select)  
+        st.write("**URL Completa:**", auth_url_full)
     
-    with col2:
-        # Componente que maneja popup + comunicación entre pestañas
+    col1, col2, col3 = st.columns(3)
+    
+    # OPCIÓN 1: URL MÍNIMA
+    with col1:
+        st.markdown("### 🟢 Opción 1: Mínima")
+        st.write("Sin parámetros restrictivos")
+        
+        # Botón JavaScript agresivo
         components.html(f"""
-            <div style="text-align: center; margin: 20px 0;">
-                <button id="googleLogin" style="
-                    background: linear-gradient(90deg, #4285f4, #34a853);
-                    color: white;
-                    border: none;
-                    padding: 15px 30px;
-                    border-radius: 8px;
-                    font-weight: bold;
-                    font-size: 16px;
-                    cursor: pointer;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-                    transition: all 0.3s ease;
-                    width: 100%;
-                ">
-                    🔗 Iniciar sesión con Google
-                </button>
-                
-                <div id="status" style="margin-top: 15px; font-size: 14px; color: #666;"></div>
-            </div>
-            
-            <script>
-                let authWindow = null;
-                
-                document.getElementById('googleLogin').addEventListener('click', function() {{
-                    const button = this;
-                    const status = document.getElementById('status');
-                    
-                    button.disabled = true;
-                    button.innerHTML = '🔄 Abriendo Google...';
-                    status.innerHTML = 'Abriendo ventana de autenticación...';
-                    
-                    // Abrir en popup centrado
-                    const width = 500;
-                    const height = 600;
-                    const left = (screen.width - width) / 2;
-                    const top = (screen.height - height) / 2;
-                    
-                    authWindow = window.open(
-                        "{auth_url}",
-                        "googleAuth",
-                        `width=${{width}},height=${{height}},left=${{left}},top=${{top}},resizable=yes,scrollbars=yes`
-                    );
-                    
-                    // Escuchar cuando se cierre la ventana
-                    const checkClosed = setInterval(() => {{
-                        if (authWindow && authWindow.closed) {{
-                            clearInterval(checkClosed);
-                            button.disabled = false;
-                            button.innerHTML = '🔗 Iniciar sesión con Google';
-                            status.innerHTML = 'Ventana cerrada. Si completaste la autenticación, recarga la página.';
-                            
-                            // Auto-recargar la página después de 2 segundos
-                            setTimeout(() => {{
-                                window.location.reload();
-                            }}, 2000);
-                        }}
-                    }}, 1000);
-                    
-                    // Fallback: recargar después de 30 segundos
-                    setTimeout(() => {{
-                        if (authWindow && !authWindow.closed) {{
-                            status.innerHTML = 'Tomando demasiado tiempo, recargando página...';
-                            setTimeout(() => {{
-                                window.location.reload();
-                            }}, 2000);
-                        }}
-                    }}, 30000);
-                }});
-                
-                // Hover effects
-                document.getElementById('googleLogin').addEventListener('mouseover', function() {{
-                    if (!this.disabled) {{
-                        this.style.transform = 'translateY(-2px)';
-                        this.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
-                    }}
-                }});
-                
-                document.getElementById('googleLogin').addEventListener('mouseout', function() {{
-                    if (!this.disabled) {{
-                        this.style.transform = 'translateY(0px)';
-                        this.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
-                    }}
-                }});
-            </script>
-        """, height=120)
+            <button onclick="window.location.href='{auth_url_minimal}'" style="
+                background: #28a745; color: white; border: none; padding: 10px 20px; 
+                border-radius: 5px; cursor: pointer; width: 100%;
+            ">🚀 Mismo tab - Mínimal</button>
+        """, height=60)
         
-        # Instrucciones adicionales
-        st.markdown("---")
-        st.info("""
-        **Instrucciones:**
-        1. Haz clic en "Iniciar sesión con Google"
-        2. Se abrirá una ventana popup para autenticar
-        3. Completa la autenticación en la ventana popup
-        4. La página se recargará automáticamente
-        5. ¡Listo! Estarás dentro de la aplicación
-        """)
+        # Enlace directo
+        st.markdown(f"[📎 Enlace directo]({auth_url_minimal})")
+    
+    # OPCIÓN 2: URL SELECT ACCOUNT  
+    with col2:
+        st.markdown("### 🟡 Opción 2: Select Account")
+        st.write("Solo selector de cuenta")
         
-        # Opción manual por si acaso
-        with st.expander("🔧 Si no funciona el popup"):
-            st.markdown(f"**Enlace directo:**")
-            st.markdown(f"[Abrir Google OAuth]({auth_url})")
-            st.markdown("*Después de autenticar, vuelve manualmente a esta pestaña y recarga*")
+        components.html(f"""
+            <button onclick="window.location.replace('{auth_url_select}')" style="
+                background: #ffc107; color: black; border: none; padding: 10px 20px; 
+                border-radius: 5px; cursor: pointer; width: 100%;
+            ">🔄 Replace - Select</button>
+        """, height=60)
+        
+        st.markdown(f"[📎 Enlace directo]({auth_url_select})")
+    
+    # OPCIÓN 3: URL COMPLETA
+    with col3:
+        st.markdown("### 🔴 Opción 3: Completa")
+        st.write("Con todos los parámetros")
+        
+        components.html(f"""
+            <button onclick="window.open('{auth_url_full}', '_self')" style="
+                background: #dc3545; color: white; border: none; padding: 10px 20px; 
+                border-radius: 5px; cursor: pointer; width: 100%;
+            ">🎯 Force Self - Full</button>
+        """, height=60)
+        
+        st.markdown(f"[📎 Enlace directo]({auth_url_full})")
+    
+    # OPCIÓN 4: IFRAME (experimental)
+    st.markdown("---")
+    st.markdown("### 🧪 Opción 4: Experimental - iFrame")
+    
+    if st.button("🔬 Probar con iFrame", use_container_width=True):
+        components.iframe(auth_url_minimal, height=600)
+    
+    # INSTRUCCIONES
+    st.markdown("---")
+    st.info("""
+    **🧪 Instrucciones de prueba:**
+    
+    1. **Prueba la Opción 1 (Verde)** primero - es la menos restrictiva
+    2. Si no funciona, prueba la **Opción 2 (Amarilla)**
+    3. Como último recurso, usa la **Opción 3 (Roja)**
+    4. La **Opción 4** es experimental con iFrame
+    
+    **¿Cuál abre en la misma pestaña?** Dime cuál funciona mejor.
+    """)
+    
+    # DEBUG ADICIONAL
+    st.markdown("---")
+    if st.checkbox("🔧 Mostrar debug avanzado"):
+        st.write("**Session State actual:**", dict(st.session_state))
+        st.write("**Query Params actuales:**", st.query_params.to_dict())
+        st.write("**User Agent:**", st.context.headers.get("user-agent", "No disponible"))
