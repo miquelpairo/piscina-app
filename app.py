@@ -318,8 +318,8 @@ def configurar_gemini():
         st.error(f"Error configurando Gemini: {e}")
         return None
 
-def analizar_tendencias_piscina(df):
-    """Analiza tendencias de la piscina usando Google Gemini con contexto de notas"""
+def analizar_tendencias_piscina(df, maintenance_sheet=None, info_sheet=None):
+    """Analiza tendencias de la piscina usando Google Gemini con contexto completo"""
     
     # Configurar Gemini
     model = configurar_gemini()
@@ -330,7 +330,9 @@ def analizar_tendencias_piscina(df):
         return "📊 No hay datos suficientes para análizar"
     
     try:
-        # Preparar datos de las últimas 10 mediciones
+        # ============================================================================
+        # 📊 DATOS DE MEDICIONES
+        # ============================================================================
         latest_data = df.tail(10)
         
         # Estadísticas básicas
@@ -343,55 +345,137 @@ def analizar_tendencias_piscina(df):
                 
                 stats_resumen.append(f"• {param}: {current} (promedio últimas 5: {avg_last_5:.1f}) - {trend}")
         
-        # Preparar datos con notas para la IA
+        # Preparar datos con notas
         datos_con_contexto = []
         for _, row in latest_data.iterrows():
             fecha_str = row['Dia'].strftime('%d/%m/%Y')
             linea_datos = f"{fecha_str}: pH={row['pH']}, Sal={row['Sal']}, FAC={row['FAC']}, ORP={row['ORP']}"
             
-            # Agregar notas si existen
             if 'Notas' in row and pd.notna(row['Notas']) and row['Notas'].strip():
                 linea_datos += f" | NOTAS: {row['Notas']}"
             
             datos_con_contexto.append(linea_datos)
         
-        # Crear contexto de notas importantes
-        notas_importantes = []
-        if 'Notas' in latest_data.columns:
-            for _, row in latest_data.iterrows():
-                if pd.notna(row['Notas']) and row['Notas'].strip():
-                    fecha_nota = row['Dia'].strftime('%d/%m')
-                    notas_importantes.append(f"• {fecha_nota}: {row['Notas']}")
+        # ============================================================================
+        # 🔧 DATOS DE MANTENIMIENTO
+        # ============================================================================
+        mantenimiento_contexto = "No hay datos de mantenimiento disponibles"
         
-        contexto_notas = "\n".join(notas_importantes) if notas_importantes else "No hay notas registradas"
+        if maintenance_sheet:
+            try:
+                maint_df = get_maintenance_data(maintenance_sheet)
+                if not maint_df.empty:
+                    # Últimos 5 mantenimientos
+                    recent_maint = maint_df.tail(5)
+                    maint_lines = []
+                    
+                    for _, maint in recent_maint.iterrows():
+                        fecha_mant = maint['Fecha'].strftime('%d/%m/%Y')
+                        maint_lines.append(f"• {fecha_mant}: {maint['Tipo']} (Estado antes: {maint['Estado_Antes']}, {maint['Tiempo_Minutos']}min)")
+                        if pd.notna(maint['Notas']) and maint['Notas'].strip():
+                            maint_lines.append(f"  └─ Notas: {maint['Notas']}")
+                    
+                    # Próximos mantenimientos
+                    future_maint = maint_df[
+                        (maint_df['Proximo_Mantenimiento'].notna()) & 
+                        (maint_df['Proximo_Mantenimiento'] > pd.Timestamp.now())
+                    ]
+                    
+                    if not future_maint.empty:
+                        maint_lines.append("\nPRÓXIMOS MANTENIMIENTOS:")
+                        for _, future in future_maint.head(3).iterrows():
+                            days_until = (future['Proximo_Mantenimiento'].date() - pd.Timestamp.now().date()).days
+                            maint_lines.append(f"• {future['Tipo']}: {future['Proximo_Mantenimiento'].strftime('%d/%m/%Y')} (en {days_until} días)")
+                    
+                    mantenimiento_contexto = "\n".join(maint_lines)
+            except Exception as e:
+                mantenimiento_contexto = f"Error obteniendo mantenimiento: {str(e)}"
         
-        # Crear prompt mejorado con contexto
+        # ============================================================================
+        # 🏊‍♂️ INFORMACIÓN DE PISCINA
+        # ============================================================================
+        piscina_contexto = "No hay información de piscina disponible"
+        
+        if info_sheet:
+            try:
+                pool_info = get_pool_info(info_sheet)
+                if pool_info:
+                    info_lines = []
+                    
+                    # Información técnica clave
+                    volumen = pool_info.get('Volumen_Litros', {}).get('valor', '0')
+                    if volumen != '0':
+                        info_lines.append(f"• Volumen: {volumen} litros")
+                    
+                    dimensiones = []
+                    largo = pool_info.get('Largo_Metros', {}).get('valor', '')
+                    ancho = pool_info.get('Ancho_Metros', {}).get('valor', '')
+                    prof = pool_info.get('Profundidad_Metros', {}).get('valor', '')
+                    if largo and ancho and prof:
+                        info_lines.append(f"• Dimensiones: {largo}m x {ancho}m x {prof}m")
+                    
+                    # Equipamiento
+                    bomba = pool_info.get('Bomba_Modelo', {}).get('valor', '')
+                    if bomba:
+                        info_lines.append(f"• Bomba: {bomba}")
+                    
+                    filtro = pool_info.get('Filtro_Tipo', {}).get('valor', '')
+                    if filtro:
+                        info_lines.append(f"• Filtro: {filtro}")
+                    
+                    clorador = pool_info.get('Clorador_Modelo', {}).get('valor', '')
+                    if clorador:
+                        info_lines.append(f"• Clorador: {clorador}")
+                    
+                    generador = pool_info.get('Generador_Porcentaje', {}).get('valor', '')
+                    if generador:
+                        info_lines.append(f"• Generador al: {generador}%")
+                    
+                    # Notas importantes
+                    notas_gen = pool_info.get('Notas_Generales', {}).get('valor', '')
+                    if notas_gen:
+                        info_lines.append(f"• Notas: {notas_gen}")
+                    
+                    piscina_contexto = "\n".join(info_lines) if info_lines else "Información de piscina incompleta"
+            except Exception as e:
+                piscina_contexto = f"Error obteniendo info piscina: {str(e)}"
+        
+        # ============================================================================
+        # 🤖 PROMPT COMPLETO PARA IA
+        # ============================================================================
         prompt = f"""
-Eres un experto en mantenimiento de piscinas con clorador salino. Analiza estos datos:
+Eres un experto en mantenimiento de piscinas con clorador salino. Tienes acceso completo al historial:
 
-DATOS RECIENTES CON CONTEXTO:
+DATOS RECIENTES DE MEDICIONES:
 {chr(10).join(datos_con_contexto)}
 
-TENDENCIAS OBSERVADAS:
+TENDENCIAS DETECTADAS:
 {chr(10).join(stats_resumen)}
 
-NOTAS DEL PROPIETARIO (contexto importante):
-{contexto_notas}
+HISTORIAL DE MANTENIMIENTO:
+{mantenimiento_contexto}
+
+INFORMACIÓN TÉCNICA DE LA PISCINA:
+{piscina_contexto}
 
 RANGOS ÓPTIMOS:
 • pH: 7.2-7.6 | Sal: 2700-4500 ppm | FAC: 1.0-3.0 ppm
 • ORP: 650-750 mV | Conductividad: 4000-8000 µS/cm | TDS: 2000-4500 ppm
 
-Considera las NOTAS del propietario para entender cambios en los parámetros (lluvia, mantenimiento, etc.).
+CONTEXTO IMPORTANTE:
+- Considera el historial de mantenimiento para entender cambios
+- Ten en cuenta el equipamiento y configuración actual
+- Relaciona problemas con mantenimientos pendientes o recientes
+- Sugiere acciones basadas en el volumen y características de la piscina
 
-Proporciona análisis conciso (máximo 250 palabras) con:
+Proporciona análisis experto (máximo 300 palabras) con:
 
-🎯 **ESTADO ACTUAL** (considerando contexto de notas)
-📊 **TENDENCIAS CLAVE** (relaciona cambios con las notas)
-⚠️ **ALERTAS** (parámetros críticos)
-💡 **RECOMENDACIONES** (3 acciones específicas basadas en datos y notas)
+🎯 **ESTADO ACTUAL** (considerando todo el contexto)
+📊 **ANÁLISIS DE TENDENCIAS** (relacionando con mantenimiento e info técnica)
+⚠️ **ALERTAS CRÍTICAS** (parámetros + mantenimiento vencido)
+💡 **RECOMENDACIONES ESPECÍFICAS** (4 acciones prioritarias basadas en todo el contexto)
 
-Respuesta práctica para propietario de piscina.
+Respuesta profesional y específica para esta piscina en particular.
         """
         
         # Generar análisis
@@ -1132,7 +1216,7 @@ def main():
         with col2:
             if st.button("🔍 Analizar Tendencias con IA", type="primary", use_container_width=True):
                 with st.spinner("🤖 Analizando datos con Inteligencia Artificial..."):
-                    analisis = analizar_tendencias_piscina(df)
+                    analisis = analizar_tendencias_piscina(df, maintenance_sheet, info_sheet)
                     
                     st.markdown("#### 📋 Análisis de Tendencias")
                     st.markdown(f"""
