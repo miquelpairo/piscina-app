@@ -1004,19 +1004,6 @@ def show_chemical_calculator(volumen_litros):
         st.info(instrucciones)
         st.warning("⚠️ **Importante:** Mantener filtración 24h. Aspirar fondo después de 48h")
 
-def test_gemini_connection():
-    """Función temporal para probar Gemini"""
-    try:
-        api_key = st.secrets.get("GEMINI_API_KEY")
-        if not api_key:
-            return "❌ No se encontró GEMINI_API_KEY en secrets"
-        
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-pro')
-        response = model.generate_content("Di hola mundo")
-        return f"✅ Conectado correctamente: {response.text[:50]}..."
-    except Exception as e:
-        return f"❌ Error: {str(e)}"
 
 def main():
     # Título principal mejorado
@@ -1143,10 +1130,6 @@ def main():
                     st.info("💡 **Tip:** El análisis se actualiza cada 5 minutos automáticamente")
         
         st.markdown("---")
-                        # TEMPORAL - para probar conexión
-        if st.button("🧪 Test Gemini"):
-            resultado = test_gemini_connection()
-            st.write(resultado)
 
         # Resumen general
         st.markdown("### 🎯 Resumen del Estado")
