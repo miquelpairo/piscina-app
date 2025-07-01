@@ -13,15 +13,9 @@ from login import show_login_screen
 from auth import get_logged_user_email
 from user_lookup import get_user_spreadsheet_id
 
-# 🔐 Lógica de autenticación
 if "user_email" not in st.session_state:
-    if st.session_state.get("show_signup_form"):
-        st.warning("⚠️ Aquí irá el formulario de alta de nuevo usuario.")  # 👈 temporal
-        st.stop()
-    elif "code" in st.query_params:
-        email = get_logged_user_email()
-        st.stop()
-    else:
+    email = get_logged_user_email()
+    if not email:
         show_login_screen()
         st.stop()
 else:
