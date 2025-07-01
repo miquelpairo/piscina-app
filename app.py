@@ -12,8 +12,8 @@ from user_lookup import get_user_spreadsheet_id
 
 # ✅ SOLO UN st.set_page_config - AL INICIO
 st.set_page_config(
-    page_title="Control Piscina",
-    page_icon="🏊‍♂️",
+    page_title="Pool Master",
+    page_icon="💧",
     layout="wide"
 )
 
