@@ -51,53 +51,30 @@ def show_login_screen():
         f"scope={scope_str}"
     )
     
-    # CSS simple que SÍ funciona en Streamlit
+    # Header principal simple
     st.markdown("""
-        <style>
-        .login-header {
+        <div style="
             text-align: center;
             background: linear-gradient(90deg, #4285f4, #34a853);
             color: white;
             padding: 40px 20px;
             border-radius: 10px;
             margin: 20px 0;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-    
-    # Header principal
-    st.markdown("""
-        <div class="login-header">
+        ">
             <h1>🔐 Control Piscina</h1>
             <p>Accede con tu cuenta de Google o crea una nueva</p>
         </div>
     """, unsafe_allow_html=True)
     
-    # Espaciado
     st.markdown("<br>", unsafe_allow_html=True)
     
     # Columnas para centrar
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
-        # Botón principal con enlace directo
-        st.markdown(f"""
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="{auth_url}" target="_self" style="
-                    background: #4285f4;
-                    color: white;
-                    padding: 15px 30px;
-                    text-decoration: none;
-                    border-radius: 8px;
-                    font-size: 18px;
-                    font-weight: bold;
-                    display: inline-block;
-                    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-                ">
-                    🔗 Iniciar sesión con Google
-                </a>
-            </div>
-        """, unsafe_allow_html=True)
+        # ✅ USAR SOLO ENLACE DIRECTO (que funcionaba)
+        st.markdown("### 🔗 Iniciar sesión")
+        st.markdown(f"[**🚀 Iniciar sesión con Google**]({auth_url})")
         
         # Separador
         st.markdown("---")
@@ -106,13 +83,17 @@ def show_login_screen():
         st.markdown("### 👤 ¿Primera vez aquí?")
         st.write("Crear una cuenta es rápido y sencillo. Solo necesitas tu email de Google.")
         
-        # Botón de registro usando st.button (más confiable)
         if st.button("➕ Crear nueva cuenta", 
                     key="signup_btn", 
                     use_container_width=True,
                     type="secondary"):
             st.session_state["show_signup_form"] = True
             st.rerun()
+            
+        # Debug: Mostrar la URL para verificar
+        with st.expander("🔧 Debug - Verificar URL"):
+            st.code(auth_url)
+            st.write("**Redirect URI configurada:**", redirect_uri)
     
     # Mostrar formulario de registro si se activó
     if st.session_state.get("show_signup_form"):
