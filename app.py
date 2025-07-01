@@ -485,6 +485,132 @@ Respuesta profesional y específica para esta piscina en particular.
     except Exception as e:
         return f"❌ Error en el análisis: {str(e)}"
 
+def consultar_ia_personalizada(df, maintenance_sheet=None, info_sheet=None, pregunta_usuario=""):
+    """Responde preguntas específicas del usuario usando contexto completo"""
+    
+    # Configurar Gemini
+    model = configurar_gemini()
+    if model is None:
+        return "❌ Error: No se pudo conectar con la IA"
+    
+    if df.empty:
+        return "📊 No hay datos suficientes para responder tu consulta"
+    
+    if not pregunta_usuario.strip():
+        return "❓ No has hecho ninguna pregunta"
+    
+    try:
+        # ============================================================================
+        # 📊 CONTEXTO DE DATOS ACTUALES
+        # ============================================================================
+        latest_data = df.tail(5)  # Últimas 5 mediciones para consultas
+        
+        # Datos actuales resumidos
+        current_values = df.iloc[-1]
+        datos_actuales = []
+        for param in ['pH', 'Sal', 'FAC', 'ORP', 'Conductividad', 'TDS', 'Temperatura']:
+            if param in current_values:
+                valor = current_values[param]
+                estado = check_parameter_status(valor, param)
+                estado_texto = {"optimal": "✅ ÓPTIMO", "low": "⚠️ BAJO", "high": "⚠️ ALTO", "unknown": "❓"}.get(estado, "❓")
+                datos_actuales.append(f"• {param}: {valor} {RANGES.get(param, {}).get('unit', '')} - {estado_texto}")
+        
+        # Tendencias básicas
+        tendencias = []
+        if len(df) >= 3:
+            for param in ['pH', 'Sal', 'FAC', 'ORP']:
+                if param in df.columns:
+                    recent_vals = df[param].tail(3).tolist()
+                    if recent_vals[0] < recent_vals[-1]:
+                        tendencias.append(f"• {param}: Tendencia ascendente")
+                    elif recent_vals[0] > recent_vals[-1]:
+                        tendencias.append(f"• {param}: Tendencia descendente")
+                    else:
+                        tendencias.append(f"• {param}: Estable")
+        
+        # ============================================================================
+        # 🔧 CONTEXTO DE MANTENIMIENTO
+        # ============================================================================
+        mant_contexto = "Sin datos de mantenimiento"
+        if maintenance_sheet:
+            try:
+                maint_df = get_maintenance_data(maintenance_sheet)
+                if not maint_df.empty:
+                    ultimo_mant = maint_df.iloc[-1]
+                    dias_ultimo = (pd.Timestamp.now().date() - ultimo_mant['Fecha'].date()).days
+                    mant_contexto = f"Último mantenimiento: {ultimo_mant['Tipo']} hace {dias_ultimo} días"
+                    
+                    # Próximos mantenimientos
+                    future_maint = maint_df[
+                        (maint_df['Proximo_Mantenimiento'].notna()) & 
+                        (maint_df['Proximo_Mantenimiento'] > pd.Timestamp.now())
+                    ]
+                    if not future_maint.empty:
+                        proximo = future_maint.iloc[0]
+                        dias_proximo = (proximo['Proximo_Mantenimiento'].date() - pd.Timestamp.now().date()).days
+                        mant_contexto += f"\nPróximo: {proximo['Tipo']} en {dias_proximo} días"
+            except:
+                pass
+        
+        # ============================================================================
+        # 🏊‍♂️ CONTEXTO DE PISCINA
+        # ============================================================================
+        pool_contexto = "Sin información técnica"
+        if info_sheet:
+            try:
+                pool_info = get_pool_info(info_sheet)
+                if pool_info:
+                    volumen = pool_info.get('Volumen_Litros', {}).get('valor', '0')
+                    generador = pool_info.get('Generador_Porcentaje', {}).get('valor', '0')
+                    filtro = pool_info.get('Filtro_Tipo', {}).get('valor', 'Desconocido')
+                    pool_contexto = f"Volumen: {volumen}L | Generador: {generador}% | Filtro: {filtro}"
+            except:
+                pass
+        
+        # ============================================================================
+        # 🤖 PROMPT ENFOCADO EN LA PREGUNTA
+        # ============================================================================
+        prompt = f"""
+Eres un experto técnico en piscinas con clorador salino. Un propietario te hace esta pregunta:
+
+PREGUNTA: "{pregunta_usuario}"
+
+DATOS ACTUALES DE SU PISCINA:
+{chr(10).join(datos_actuales)}
+
+TENDENCIAS RECIENTES:
+{chr(10).join(tendencias)}
+
+CONTEXTO DE MANTENIMIENTO:
+{mant_contexto}
+
+INFORMACIÓN TÉCNICA:
+{pool_contexto}
+
+NOTAS RECIENTES:
+{chr(10).join([f"• {row['Dia'].strftime('%d/%m')}: {row.get('Notas', 'Sin notas')}" for _, row in latest_data.iterrows() if pd.notna(row.get('Notas', '')) and row.get('Notas', '').strip()])}
+
+RANGOS ÓPTIMOS DE REFERENCIA:
+• pH: 7.2-7.6 | Sal: 2700-4500 ppm | FAC: 1.0-3.0 ppm | ORP: 650-750 mV
+
+INSTRUCCIONES:
+- Responde ESPECÍFICAMENTE a su pregunta
+- Usa los datos actuales de SU piscina para responder
+- Si la pregunta es sobre parámetros, menciona los valores actuales
+- Si pregunta sobre mantenimiento, considera el historial
+- Si pregunta sobre dosificación, calcula según su volumen
+- Si pregunta sobre timing, considera su historial de mantenimiento
+- Respuesta máximo 200 palabras, directa y práctica
+
+Responde como un técnico experto que conoce perfectamente esta piscina específica.
+        """
+        
+        # Generar respuesta
+        response = model.generate_content(prompt)
+        return response.text
+        
+    except Exception as e:
+        return f"❌ Error respondiendo la consulta: {str(e)}"
 
 def check_parameter_status(value, param):
     """Verifica si un parámetro está en rango óptimo"""
@@ -1207,32 +1333,85 @@ def main():
         else:
             st.success("✅ No hay alertas. ¡Tu piscina está en perfecto estado!")
 
-       # 🤖 ANÁLISIS INTELIGENTE CON IA
+       # ============================================================================
+        # 🤖 ANÁLISIS INTELIGENTE CON IA
         # ============================================================================
         st.markdown("---")
         st.markdown("### 🤖 Análisis Inteligente")
         
+        # Campo para preguntas específicas
+        st.markdown("#### 💬 Consulta Personalizada (Opcional)")
+        pregunta_usuario = st.text_area(
+            "Haz una pregunta específica a la IA:",
+            placeholder="Ej: ¿Por qué el pH está bajando? ¿Cuándo debo cambiar el filtro? ¿El cloro está bien para esta época?",
+            height=60,
+            help="Deja vacío para análisis automático, o escribe una pregunta específica"
+        )
+        
+        # Botones de análisis
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            if st.button("🔍 Analizar Tendencias con IA", type="primary", use_container_width=True):
-                with st.spinner("🤖 Analizando datos con Inteligencia Artificial..."):
-                    analisis = analizar_tendencias_piscina(df, maintenance_sheet, info_sheet)
-                    
-                    st.markdown("#### 📋 Análisis de Tendencias")
-                    st.markdown(f"""
-                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                               border-radius: 15px; padding: 20px; margin: 10px 0;
-                               border: 1px solid rgba(255, 255, 255, 0.2);
-                               box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);">
-                        <div style="color: white; line-height: 1.6;">
-                            {analisis.replace(chr(10), '<br>')}
+            # Dos botones diferentes según si hay pregunta o no
+            if pregunta_usuario.strip():
+                col_a, col_b = st.columns(2)
+                
+                with col_a:
+                    if st.button("🔍 Análisis Automático", use_container_width=True):
+                        with st.spinner("🤖 Analizando tendencias..."):
+                            analisis = analizar_tendencias_piscina(df, maintenance_sheet, info_sheet)
+                            
+                            st.markdown("#### 📋 Análisis de Tendencias")
+                            st.markdown(f"""
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                       border-radius: 15px; padding: 20px; margin: 10px 0;
+                                       border: 1px solid rgba(255, 255, 255, 0.2);
+                                       box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);">
+                                <div style="color: white; line-height: 1.6;">
+                                    {analisis.replace(chr(10), '<br>')}
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                
+                with col_b:
+                    if st.button("💬 Responder Pregunta", type="primary", use_container_width=True):
+                        with st.spinner("🤖 Respondiendo tu consulta..."):
+                            respuesta = consultar_ia_personalizada(df, maintenance_sheet, info_sheet, pregunta_usuario)
+                            
+                            st.markdown("#### 💬 Respuesta Personalizada")
+                            st.markdown(f"""
+                            <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); 
+                                       border-radius: 15px; padding: 20px; margin: 10px 0;
+                                       border: 1px solid rgba(255, 255, 255, 0.2);
+                                       box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);">
+                                <div style="color: white; line-height: 1.6;">
+                                    <strong>Tu pregunta:</strong> {pregunta_usuario}<br><br>
+                                    <strong>Respuesta:</strong><br>
+                                    {respuesta.replace(chr(10), '<br>')}
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+            else:
+                # Solo botón de análisis automático si no hay pregunta
+                if st.button("🔍 Analizar Tendencias con IA", type="primary", use_container_width=True):
+                    with st.spinner("🤖 Analizando datos con Inteligencia Artificial..."):
+                        analisis = analizar_tendencias_piscina(df, maintenance_sheet, info_sheet)
+                        
+                        st.markdown("#### 📋 Análisis de Tendencias")
+                        st.markdown(f"""
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                   border-radius: 15px; padding: 20px; margin: 10px 0;
+                                   border: 1px solid rgba(255, 255, 255, 0.2);
+                                   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);">
+                            <div style="color: white; line-height: 1.6;">
+                                {analisis.replace(chr(10), '<br>')}
+                            </div>
                         </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    st.info("💡 **Tip:** El análisis se actualiza cada 5 minutos automáticamente")
+                        """, unsafe_allow_html=True)
+                        
+                        st.info("💡 **Tip:** Escribe una pregunta específica arriba para consultas personalizadas")
         
         st.markdown("---")
+
 
         # Resumen general
         st.markdown("### 🎯 Resumen del Estado")
