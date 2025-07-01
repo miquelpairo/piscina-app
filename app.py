@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -5,23 +6,31 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime, date, time
 import streamlit.components.v1 as components
-
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-
 from login import show_login_screen
-from auth import get_logged_user_email
+from auth import get_logged_user_email, logout
 from user_lookup import get_user_spreadsheet_id
 
-if "user_email" not in st.session_state:
-    email = get_logged_user_email()
-    if not email:
-        show_login_screen()
-        st.stop()
-else:
-    email = st.session_state["user_email"]
+# Configuración de la página
+st.set_page_config(
+    page_title="Control Piscina",
+    page_icon="🏊‍♂️",
+    layout="wide"
+)
 
-# ✅ Bienvenida tras login
+# Verificar autenticación
+email = get_logged_user_email()
+
+if not email:
+    # Usuario no autenticado, mostrar pantalla de login
+    show_login_screen()
+    st.stop()
+
+# Usuario autenticado - continuar con la aplicación
+st.session_state["user_email"] = email
+
+# ✅ Mostrar mensaje de bienvenida solo una vez tras login
 if st.session_state.get("just_logged_in"):
     st.success(f"✅ Bienvenido, {email}")
     del st.session_state["just_logged_in"]
