@@ -1143,9 +1143,9 @@ def main():
         
         st.markdown("---")
                         # TEMPORAL - para probar conexión
-            if st.button("🧪 Test Gemini"):
-                resultado = test_gemini_connection()
-                st.write(resultado)
+        if st.button("🧪 Test Gemini"):
+            resultado = test_gemini_connection()
+            st.write(resultado)
 
         # Resumen general
         st.markdown("### 🎯 Resumen del Estado")
