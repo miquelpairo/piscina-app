@@ -927,7 +927,7 @@ def show_chemical_calculator(volumen_litros):
 
 def main():
     # Título principal mejorado
-    st.markdown('<h1 class="main-title">🏊‍♂️ Control de Piscina</h1>', 
+    st.markdown('<h1 class="main-title">🏊‍♂️ Pool Master</h1>', 
                 unsafe_allow_html=True)
                 
     # Inicializar confirmaciones de borrado
