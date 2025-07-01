@@ -8,8 +8,7 @@ from datetime import datetime, date, time
 import streamlit.components.v1 as components
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from login import show_login_screen
-from auth import get_logged_user_email, logout
+from auth_simple import handle_authentication
 from user_lookup import get_user_spreadsheet_id
 
 # Configuración de la página
@@ -19,18 +18,16 @@ st.set_page_config(
     layout="wide"
 )
 
-# Verificar autenticación
-email = get_logged_user_email()
+# Manejar autenticación
+email = handle_authentication()
 
 if not email:
-    # Usuario no autenticado, mostrar pantalla de login
-    show_login_screen()
-    st.stop()
+    st.stop()  # La función handle_authentication ya muestra la UI necesaria
 
-# Usuario autenticado - continuar con la aplicación
-st.session_state["user_email"] = email
+# Usuario autenticado
+st.title("🏊‍♂️ Control Piscina")
 
-# ✅ Mostrar mensaje de bienvenida solo una vez tras login
+# Mostrar mensaje de bienvenida solo una vez
 if st.session_state.get("just_logged_in"):
     st.success(f"✅ Bienvenido, {email}")
     del st.session_state["just_logged_in"]
