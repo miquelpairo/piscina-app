@@ -55,11 +55,12 @@ def _process_oauth_callback(code):
                 # Limpiar query params
                 st.query_params.clear()
                 
-                # Forzar recarga
-                st.rerun()
+                # ✅ DEVOLVER EMAIL DIRECTAMENTE (sin rerun)
+                return email
                 
             else:
                 st.error("❌ No se pudo obtener el email del usuario.")
+                st.query_params.clear()
                 return None
                 
     except Exception as e:
