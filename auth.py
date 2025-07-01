@@ -2,14 +2,30 @@ import streamlit as st
 from authlib.integrations.requests_client import OAuth2Session
 import urllib.parse
 
+# 🔗 Construye el link de autorización de Google
+def get_google_auth_url():
+    client_id = st.secrets["google_oauth"]["client_id"]
+    redirect_uri = st.secrets["google_oauth"]["redirect_uri"]
+    scope = "openid email profile"
+    scope_encoded = urllib.parse.quote_plus(scope)
+
+    return (
+        f"https://accounts.google.com/o/oauth2/auth"
+        f"?response_type=code"
+        f"&client_id={client_id}"
+        f"&redirect_uri={redirect_uri}"
+        f"&scope={scope_encoded}"
+        f"&access_type=offline"
+        f"&prompt=consent"
+    )
+
+# 🔐 Proceso completo de autenticación OAuth
 def get_logged_user_email():
     client_id = st.secrets["google_oauth"]["client_id"]
     client_secret = st.secrets["google_oauth"]["client_secret"]
     redirect_uri = st.secrets["google_oauth"]["redirect_uri"]
     scope = ["openid", "email", "profile"]
-    scope_str = urllib.parse.quote_plus(" ".join(scope))
 
-    authorize_url = "https://accounts.google.com/o/oauth2/auth"
     token_url = "https://oauth2.googleapis.com/token"
     userinfo_url = "https://openidconnect.googleapis.com/v1/userinfo"
 
@@ -17,22 +33,14 @@ def get_logged_user_email():
     if "user_email" in st.session_state:
         return st.session_state["user_email"]
 
-    # ✅ Mostrar botón de login si no hay código
+    # ⏳ Si no hay código aún (redirección pendiente)
     if "code" not in st.query_params:
-        auth_url = (
-            f"{authorize_url}?response_type=code"
-            f"&client_id={client_id}"
-            f"&redirect_uri={redirect_uri}"
-            f"&scope={scope_str}"
-            f"&access_type=offline"
-            f"&prompt=consent"
-        )
-        st.markdown(f"[🔐 Iniciar sesión con Google]({auth_url})")
-        st.stop()
+        st.stop()  # Ya fue redirigido desde login.py
 
-    # ✅ Si el token aún no ha sido usado
+    # 🆕 Si llega por primera vez con código de Google
     if "token_used" not in st.session_state:
         code = st.query_params["code"]
+
         oauth = OAuth2Session(client_id, client_secret, redirect_uri=redirect_uri, scope=scope)
         token = oauth.fetch_token(token_url, code=code)
 
@@ -58,20 +66,14 @@ def get_logged_user_email():
         st.session_state["just_logged_in"] = True
         st.session_state["token_used"] = True
 
-        # ✅ Mostrar la imagen temporalmente para debug
-        st.image(picture, width=100, caption="Imagen de perfil obtenida")
-
-        # ✅ Recarga limpia sin parámetros
+        # 🔄 Recarga limpia para eliminar ?code=... de la URL
         st.query_params.clear()
         st.rerun()
 
     else:
-        # ⚠️ Si el token se usó pero perdimos el email, relanzar login
+        # ⚠️ Si el token se usó pero se perdió el email
         if "user_email" not in st.session_state:
             del st.session_state["token_used"]
             st.rerun()
         else:
-            st.write("✅ Login persistente con email:", st.session_state["user_email"])
-            if "user_picture" in st.session_state:
-                st.image(st.session_state["user_picture"], width=100, caption="Desde sesión")
             return st.session_state["user_email"]
