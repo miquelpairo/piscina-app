@@ -4,3 +4,4 @@ plotly
 gspread
 oauth2client
 authlib
+google-generativeai
