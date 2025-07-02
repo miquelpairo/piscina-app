@@ -486,7 +486,7 @@ Respuesta profesional y específica para esta piscina en particular.
         return f"❌ Error en el análisis: {str(e)}"
 
 def consultar_ia_personalizada(df, maintenance_sheet=None, info_sheet=None, pregunta_usuario=""):
-    """Responde preguntas específicas del usuario usando contexto completo"""
+    """Responde preguntas específicas del usuario usando contexto completo (mismo que análisis automático)"""
     
     # Configurar Gemini
     model = configurar_gemini()
@@ -501,108 +501,177 @@ def consultar_ia_personalizada(df, maintenance_sheet=None, info_sheet=None, preg
     
     try:
         # ============================================================================
-        # 📊 CONTEXTO DE DATOS ACTUALES
+        # 📊 DATOS DE MEDICIONES COMPLETOS (igual que análisis automático)
         # ============================================================================
-        latest_data = df.tail(5)  # Últimas 5 mediciones para consultas
+        latest_data = df.tail(10)  # Aumentado de 5 a 10 mediciones
         
-        # Datos actuales resumidos
-        current_values = df.iloc[-1]
-        datos_actuales = []
+        # Estadísticas detalladas
+        stats_resumen = []
         for param in ['pH', 'Sal', 'FAC', 'ORP', 'Conductividad', 'TDS', 'Temperatura']:
-            if param in current_values:
-                valor = current_values[param]
-                estado = check_parameter_status(valor, param)
-                estado_texto = {"optimal": "✅ ÓPTIMO", "low": "⚠️ BAJO", "high": "⚠️ ALTO", "unknown": "❓"}.get(estado, "❓")
-                datos_actuales.append(f"• {param}: {valor} {RANGES.get(param, {}).get('unit', '')} - {estado_texto}")
+            if param in df.columns:
+                current = df[param].iloc[-1]
+                avg_last_5 = df[param].tail(5).mean()
+                trend = "📈 subiendo" if current > avg_last_5 else "📉 bajando" if current < avg_last_5 else "➡️ estable"
+                
+                # Agregar estado actual
+                status = check_parameter_status(current, param)
+                estado_texto = {"optimal": "✅ ÓPTIMO", "low": "⚠️ BAJO", "high": "⚠️ ALTO", "unknown": "❓"}.get(status, "❓")
+                
+                stats_resumen.append(f"• {param}: {current} {RANGES.get(param, {}).get('unit', '')} - {estado_texto} - {trend}")
         
-        # Tendencias básicas
-        tendencias = []
-        if len(df) >= 3:
-            for param in ['pH', 'Sal', 'FAC', 'ORP']:
-                if param in df.columns:
-                    recent_vals = df[param].tail(3).tolist()
-                    if recent_vals[0] < recent_vals[-1]:
-                        tendencias.append(f"• {param}: Tendencia ascendente")
-                    elif recent_vals[0] > recent_vals[-1]:
-                        tendencias.append(f"• {param}: Tendencia descendente")
-                    else:
-                        tendencias.append(f"• {param}: Estable")
+        # Preparar datos con notas completas (10 mediciones)
+        datos_con_contexto = []
+        for _, row in latest_data.iterrows():
+            fecha_str = row['Dia'].strftime('%d/%m/%Y')
+            linea_datos = f"{fecha_str}: pH={row['pH']}, Sal={row['Sal']}, FAC={row['FAC']}, ORP={row['ORP']}"
+            
+            if 'Notas' in row and pd.notna(row['Notas']) and row['Notas'].strip():
+                linea_datos += f" | NOTAS: {row['Notas']}"
+            
+            datos_con_contexto.append(linea_datos)
         
         # ============================================================================
-        # 🔧 CONTEXTO DE MANTENIMIENTO
+        # 🔧 CONTEXTO DE MANTENIMIENTO COMPLETO
         # ============================================================================
-        mant_contexto = "Sin datos de mantenimiento"
+        mantenimiento_contexto = "No hay datos de mantenimiento disponibles"
+        
         if maintenance_sheet:
             try:
                 maint_df = get_maintenance_data(maintenance_sheet)
                 if not maint_df.empty:
-                    ultimo_mant = maint_df.iloc[-1]
-                    dias_ultimo = (pd.Timestamp.now().date() - ultimo_mant['Fecha'].date()).days
-                    mant_contexto = f"Último mantenimiento: {ultimo_mant['Tipo']} hace {dias_ultimo} días"
+                    # Últimos 5 mantenimientos (igual que análisis automático)
+                    recent_maint = maint_df.tail(5)
+                    maint_lines = []
+                    
+                    for _, maint in recent_maint.iterrows():
+                        fecha_mant = maint['Fecha'].strftime('%d/%m/%Y')
+                        maint_lines.append(f"• {fecha_mant}: {maint['Tipo']} (Estado antes: {maint['Estado_Antes']}, {maint['Tiempo_Minutos']}min)")
+                        if pd.notna(maint['Notas']) and maint['Notas'].strip():
+                            maint_lines.append(f"  └─ Notas: {maint['Notas']}")
                     
                     # Próximos mantenimientos
                     future_maint = maint_df[
                         (maint_df['Proximo_Mantenimiento'].notna()) & 
                         (maint_df['Proximo_Mantenimiento'] > pd.Timestamp.now())
                     ]
+                    
                     if not future_maint.empty:
-                        proximo = future_maint.iloc[0]
-                        dias_proximo = (proximo['Proximo_Mantenimiento'].date() - pd.Timestamp.now().date()).days
-                        mant_contexto += f"\nPróximo: {proximo['Tipo']} en {dias_proximo} días"
-            except:
-                pass
+                        maint_lines.append("\nPRÓXIMOS MANTENIMIENTOS:")
+                        for _, future in future_maint.head(3).iterrows():
+                            days_until = (future['Proximo_Mantenimiento'].date() - pd.Timestamp.now().date()).days
+                            maint_lines.append(f"• {future['Tipo']}: {future['Proximo_Mantenimiento'].strftime('%d/%m/%Y')} (en {days_until} días)")
+                    
+                    mantenimiento_contexto = "\n".join(maint_lines)
+            except Exception as e:
+                mantenimiento_contexto = f"Error obteniendo mantenimiento: {str(e)}"
         
         # ============================================================================
-        # 🏊‍♂️ CONTEXTO DE PISCINA
+        # 🏊‍♂️ INFORMACIÓN DE PISCINA COMPLETA
         # ============================================================================
-        pool_contexto = "Sin información técnica"
+        piscina_contexto = "No hay información de piscina disponible"
+        
         if info_sheet:
             try:
                 pool_info = get_pool_info(info_sheet)
                 if pool_info:
+                    info_lines = []
+                    
+                    # Información técnica completa (igual que análisis automático)
                     volumen = pool_info.get('Volumen_Litros', {}).get('valor', '0')
-                    generador = pool_info.get('Generador_Porcentaje', {}).get('valor', '0')
-                    filtro = pool_info.get('Filtro_Tipo', {}).get('valor', 'Desconocido')
-                    pool_contexto = f"Volumen: {volumen}L | Generador: {generador}% | Filtro: {filtro}"
-            except:
-                pass
+                    if volumen != '0':
+                        info_lines.append(f"• Volumen: {volumen} litros")
+                    
+                    # Dimensiones
+                    largo = pool_info.get('Largo_Metros', {}).get('valor', '')
+                    ancho = pool_info.get('Ancho_Metros', {}).get('valor', '')
+                    prof = pool_info.get('Profundidad_Metros', {}).get('valor', '')
+                    if largo and ancho and prof:
+                        info_lines.append(f"• Dimensiones: {largo}m x {ancho}m x {prof}m")
+                    
+                    # Equipamiento completo
+                    bomba = pool_info.get('Bomba_Modelo', {}).get('valor', '')
+                    if bomba:
+                        info_lines.append(f"• Bomba: {bomba}")
+                    
+                    filtro = pool_info.get('Filtro_Tipo', {}).get('valor', '')
+                    if filtro:
+                        info_lines.append(f"• Filtro: {filtro}")
+                    
+                    clorador = pool_info.get('Clorador_Modelo', {}).get('valor', '')
+                    if clorador:
+                        info_lines.append(f"• Clorador: {clorador}")
+                    
+                    generador = pool_info.get('Generador_Porcentaje', {}).get('valor', '')
+                    if generador:
+                        info_lines.append(f"• Generador configurado al: {generador}%")
+                    
+                    # Ubicación
+                    ubicacion = pool_info.get('Ubicacion', {}).get('valor', '')
+                    if ubicacion:
+                        info_lines.append(f"• Ubicación: {ubicacion}")
+                    
+                    # Fecha instalación
+                    fecha_inst = pool_info.get('Fecha_Instalacion', {}).get('valor', '')
+                    if fecha_inst:
+                        info_lines.append(f"• Instalación: {fecha_inst}")
+                    
+                    # Notas importantes
+                    notas_gen = pool_info.get('Notas_Generales', {}).get('valor', '')
+                    if notas_gen:
+                        info_lines.append(f"• Notas importantes: {notas_gen}")
+                    
+                    piscina_contexto = "\n".join(info_lines) if info_lines else "Información de piscina incompleta"
+            except Exception as e:
+                piscina_contexto = f"Error obteniendo info piscina: {str(e)}"
+        
+        # Contexto de notas importantes de las 10 mediciones
+        notas_importantes = []
+        if 'Notas' in latest_data.columns:
+            for _, row in latest_data.iterrows():
+                if pd.notna(row['Notas']) and row['Notas'].strip():
+                    fecha_nota = row['Dia'].strftime('%d/%m')
+                    notas_importantes.append(f"• {fecha_nota}: {row['Notas']}")
+        
+        contexto_notas = "\n".join(notas_importantes) if notas_importantes else "No hay notas registradas en las últimas mediciones"
         
         # ============================================================================
-        # 🤖 PROMPT ENFOCADO EN LA PREGUNTA
+        # 🤖 PROMPT ENFOCADO EN LA PREGUNTA CON CONTEXTO COMPLETO
         # ============================================================================
         prompt = f"""
-Eres un experto técnico en piscinas con clorador salino. Un propietario te hace esta pregunta:
+Eres un experto técnico en piscinas con clorador salino. Un propietario te hace esta pregunta específica:
 
 PREGUNTA: "{pregunta_usuario}"
 
-DATOS ACTUALES DE SU PISCINA:
-{chr(10).join(datos_actuales)}
+DATOS ACTUALES Y TENDENCIAS:
+{chr(10).join(stats_resumen)}
 
-TENDENCIAS RECIENTES:
-{chr(10).join(tendencias)}
+ÚLTIMAS 10 MEDICIONES CON CONTEXTO:
+{chr(10).join(datos_con_contexto)}
 
-CONTEXTO DE MANTENIMIENTO:
-{mant_contexto}
+HISTORIAL DE MANTENIMIENTO COMPLETO:
+{mantenimiento_contexto}
 
-INFORMACIÓN TÉCNICA:
-{pool_contexto}
+INFORMACIÓN TÉCNICA COMPLETA DE LA PISCINA:
+{piscina_contexto}
 
-NOTAS RECIENTES:
-{chr(10).join([f"• {row['Dia'].strftime('%d/%m')}: {row.get('Notas', 'Sin notas')}" for _, row in latest_data.iterrows() if pd.notna(row.get('Notas', '')) and row.get('Notas', '').strip()])}
+NOTAS DEL PROPIETARIO (ÚLTIMAS MEDICIONES):
+{contexto_notas}
 
 RANGOS ÓPTIMOS DE REFERENCIA:
 • pH: 7.2-7.6 | Sal: 2700-4500 ppm | FAC: 1.0-3.0 ppm | ORP: 650-750 mV
+• Conductividad: 4000-8000 µS/cm | TDS: 2000-4500 ppm | Temperatura: 22-32°C
 
 INSTRUCCIONES:
-- Responde ESPECÍFICAMENTE a su pregunta
-- Usa los datos actuales de SU piscina para responder
-- Si la pregunta es sobre parámetros, menciona los valores actuales
-- Si pregunta sobre mantenimiento, considera el historial
-- Si pregunta sobre dosificación, calcula según su volumen
-- Si pregunta sobre timing, considera su historial de mantenimiento
-- Respuesta máximo 200 palabras, directa y práctica
+- Responde ESPECÍFICAMENTE a su pregunta usando TODO el contexto disponible
+- Relaciona la pregunta con los datos históricos, mantenimiento y características técnicas
+- Si pregunta sobre parámetros, menciona valores actuales y tendencias
+- Si pregunta sobre mantenimiento, considera el historial completo
+- Si pregunta sobre dosificación, calcula según volumen y equipamiento específico
+- Si pregunta sobre timing, considera historial de mantenimiento y próximas tareas
+- Usa las notas del propietario para entender contexto de cambios
+- Respuesta máximo 250 palabras, experta y específica para ESTA piscina
 
-Responde como un técnico experto que conoce perfectamente esta piscina específica.
+Responde como un técnico experto que conoce perfectamente esta piscina específica, su historial y equipamiento.
         """
         
         # Generar respuesta
