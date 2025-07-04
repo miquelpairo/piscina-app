@@ -12,65 +12,12 @@ from auth_fixed import process_oauth_code, show_login_screen
 from user_lookup import get_user_spreadsheet_id
 from cookie_auth import check_auto_login, save_user_to_cookies, clear_user_cookies, extend_session
 
-# ✅ FUNCIONES MÓVILES AÑADIDAS
-
-def detect_mobile_device():
-    """Detecta si es un dispositivo móvil usando JavaScript"""
-    if 'mobile_detected' not in st.session_state:
-        # JavaScript para detectar dispositivo móvil
-        mobile_js = """
-        <script>
-        function detectMobile() {
-            const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-            const screenWidth = window.screen.width;
-            const isSmallScreen = screenWidth <= 768;
-            
-            console.log('Device detected:', {isMobile, screenWidth, userAgent});
-        }
-        detectMobile();
-        </script>
-        """
-        components.html(mobile_js, height=0)
-        
-        # Fallback: asumir móvil si pantalla pequeña o user agent móvil
-        st.session_state['mobile_detected'] = True
-        st.session_state['is_mobile'] = True  # Conservador para móviles
-
-def is_mobile():
-    """Devuelve True si es dispositivo móvil"""
-    if 'mobile_detected' not in st.session_state:
-        detect_mobile_device()
-    return st.session_state.get('is_mobile', False)
-
-def show_mobile_instructions():
-    """Muestra instrucciones específicas para móviles"""
-    if is_mobile():
-        st.markdown("""
-        <div style="
-            background: #e3f2fd;
-            padding: 15px;
-            border-radius: 8px;
-            border-left: 4px solid #2196f3;
-            margin: 10px 0;
-            font-size: 14px;
-        ">
-        📱 <strong>Tips para móvil:</strong><br>
-        • Permite cookies en tu navegador<br>
-        • Añade esta página a tu pantalla de inicio<br>
-        • Usa Safari en iOS para mejor experiencia<br>
-        </div>
-        """, unsafe_allow_html=True)
-
 # ✅ SOLO UN st.set_page_config - AL INICIO
 st.set_page_config(
     page_title="Pool Master",
     page_icon="💧",
     layout="wide"
 )
-
-# ✅ DETECTAR MÓVIL AL INICIO
-detect_mobile_device()
 
 # ✅ LÓGICA MEJORADA CON COOKIES - Verificar en este orden:
 
@@ -79,8 +26,7 @@ if "user_email" not in st.session_state:
     if check_auto_login():
         # Auto-login exitoso desde cookies
         if st.session_state.get("auto_logged_in"):
-            device_type = "📱" if is_mobile() else "💻"
-            st.success(f"✅ {device_type} Bienvenido de nuevo, {st.session_state['user_email']}")
+            st.success(f"✅ Bienvenido de nuevo, {st.session_state['user_email']}")
             del st.session_state["auto_logged_in"]  # Solo mostrar una vez
 
 # 1️⃣ SEGUNDO: ¿Hay código OAuth en query params?
@@ -106,8 +52,7 @@ if "user_email" in st.session_state:
     
     # Mostrar mensaje de bienvenida solo una vez
     if st.session_state.get("just_logged_in"):
-        device_icon = "📱" if is_mobile() else "💻"
-        st.success(f"✅ {device_icon} Bienvenido, {email}")
+        st.success(f"✅ Bienvenido, {email}")
         if st.session_state.get("cookies_saved"):
             st.info("🍪 Sesión guardada - no necesitarás hacer login por 30 días")
             del st.session_state["cookies_saved"]
@@ -123,7 +68,10 @@ if "user_email" in st.session_state:
         st.error(str(e))
         st.stop()
     
-    # ✅ CSS personalizado para mejorar la apariencia
+    
+    # ✅ AQUÍ EMPIEZA TU APP PRINCIPAL (CSS y contenido)
+    
+    # CSS personalizado para mejorar la apariencia
     st.markdown("""
     <style>
         .stApp {
@@ -188,75 +136,8 @@ if "user_email" in st.session_state:
 
 else:
     # 3️⃣ ✅ ÚLTIMO RECURSO: Mostrar pantalla de login
-    # Mostrar instrucciones para móviles si es necesario
-    if is_mobile():
-        show_mobile_instructions()
-    
     show_login_screen()
     st.stop()
-
-# ============================================================================
-# 🔧 SIDEBAR CON LOGOUT MEJORADO PARA MÓVILES
-# ============================================================================
-
-def create_mobile_sidebar():
-    """Crea sidebar mejorado para móviles"""
-    with st.sidebar:
-        # Información del usuario más compacta para móviles
-        if is_mobile():
-            st.markdown("### 👤 Usuario")
-            # Foto más pequeña en móvil
-            if "user_picture" in st.session_state:
-                st.markdown(
-                    f'<div style="text-align: center;"><img src="{st.session_state["user_picture"]}" style="border-radius: 50%; width: 50px; height: 50px;"></div>',
-                    unsafe_allow_html=True
-                )
-            
-            st.markdown(f"**📱 {st.session_state['user_email'][:20]}...**")
-            
-            # Botón de logout más prominente en móvil
-            if st.button("🚪 Cerrar sesión", type="primary", use_container_width=True):
-                logout_mobile_user()
-        else:
-            # Sidebar normal para escritorio (como ya tienes)
-            st.markdown("### 🎛️ Panel de Control")
-            
-            # Info del usuario completa
-            if "user_picture" in st.session_state:
-                st.markdown(
-                    f'<div style="text-align: center; margin: 1rem 0;"><img src="{st.session_state["user_picture"]}" style="border-radius: 50%; width: 80px; height: 80px;"></div>',
-                    unsafe_allow_html=True
-                )
-            
-            st.markdown(f"**👤 {st.session_state['user_email']}**")
-            st.markdown(f"**💻 Escritorio**")
-            
-            if st.button("🔓 Cerrar sesión"):
-                logout_mobile_user()
-
-def logout_mobile_user():
-    """Maneja logout con limpieza de cookies mejorada"""
-    try:
-        # Limpiar cookies
-        if clear_user_cookies():
-            st.success("🍪 Sesión cerrada correctamente")
-        
-        # Limpiar session state pero mantener detección móvil
-        keys_to_keep = ['mobile_detected', 'is_mobile']
-        keys_to_delete = [k for k in st.session_state.keys() if k not in keys_to_keep]
-        
-        for key in keys_to_delete:
-            del st.session_state[key]
-        
-        st.markdown("""<meta http-equiv="refresh" content="0; URL='/'" />""", unsafe_allow_html=True)
-        st.stop()
-        
-    except Exception as e:
-        st.error(f"Error al cerrar sesión: {e}")
-
-# ============================================================================
-# 📱 AQUÍ EMPIEZA TU FUNCIÓN MAIN() EXACTAMENTE COMO LA TIENES
-# ============================================================================
 
 # Configuración de Google Sheets
 @st.cache_resource
