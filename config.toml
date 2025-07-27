@@ -1,0 +1,23 @@
+[server]
+# CRÍTICO: Deshabilitar file watcher para evitar límite inotify
+fileWatcherType = "none"
+runOnSave = false
+enableCORS = false
+enableXsrfProtection = true
+
+[client]
+# Reducir reconexiones automáticas
+toolbarMode = "minimal"
+
+[runner]
+# Optimizar rendimiento
+fastReruns = false
+enforceSerializableSessionState = false
+
+[logger]
+# Reducir logs para menos operaciones I/O
+level = "error"
+
+[browser]
+# Evitar múltiples tabs
+gatherUsageStats = false
