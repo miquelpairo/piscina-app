@@ -1,139 +1,98 @@
 import streamlit as st
-from streamlit_cookies_manager import EncryptedCookieManager
-import time
+import extra_streamlit_components as stx
+import datetime
 import json
 
-# Configuración de cookies
-COOKIE_EXPIRY_DAYS = 30  # Las cookies duran 30 días
-COOKIE_PASSWORD = "pool_master_secret_2024"  # Cambia por algo único
-
-def init_cookie_manager():
-    """Inicializa el gestor de cookies encriptadas"""
-    try:
-        # Solo inicializar una vez por sesión
-        if 'cookies_initialized' not in st.session_state:
-            cookies = EncryptedCookieManager(
-                prefix="pool_master_",
-                password=COOKIE_PASSWORD
-            )
-            
-            # Verificar que las cookies estén listas
-            if not cookies.ready():
-                st.stop()
-            
-            st.session_state.cookies = cookies
-            st.session_state.cookies_initialized = True
-        
-        return st.session_state.cookies
-    
-    except Exception as e:
-        st.error(f"Error inicializando cookies: {e}")
-        return None
-
-def save_user_to_cookies(email, picture_url=None):
-    """Guarda datos del usuario en cookies encriptadas"""
-    try:
-        cookies = init_cookie_manager()
-        if cookies is None:
-            return False
-        
-        # Crear datos del usuario
-        user_data = {
-            "email": email,
-            "picture": picture_url,
-            "login_time": time.time(),
-            "expires": time.time() + (COOKIE_EXPIRY_DAYS * 24 * 60 * 60)
-        }
-        
-        # Guardar en cookies
-        cookies['user_data'] = json.dumps(user_data)
-        cookies.save()
-        
-        return True
-        
-    except Exception as e:
-        st.error(f"Error guardando en cookies: {e}")
-        return False
-
-def load_user_from_cookies():
-    """Carga datos del usuario desde cookies"""
-    try:
-        cookies = init_cookie_manager()
-        if cookies is None:
-            return None
-        
-        # Verificar si existe cookie de usuario
-        user_data_str = cookies.get('user_data')
-        if not user_data_str:
-            return None
-        
-        # Parsear datos
-        user_data = json.loads(user_data_str)
-        
-        # Verificar si no ha expirado
-        if time.time() > user_data.get('expires', 0):
-            # Cookie expirada, limpiar
-            clear_user_cookies()
-            return None
-        
-        return {
-            'email': user_data.get('email'),
-            'picture': user_data.get('picture'),
-            'login_time': user_data.get('login_time')
-        }
-        
-    except Exception as e:
-        st.error(f"Error cargando cookies: {e}")
-        return None
-
-def clear_user_cookies():
-    """Limpia las cookies del usuario (logout)"""
-    try:
-        cookies = init_cookie_manager()
-        if cookies is None:
-            return False
-        
-        # Limpiar cookie
-        if 'user_data' in cookies:
-            del cookies['user_data']
-            cookies.save()
-        
-        return True
-        
-    except Exception as e:
-        st.error(f"Error limpiando cookies: {e}")
-        return False
+def get_cookie_manager():
+    """Obtiene el cookie manager (singleton por sesión)"""
+    return stx.CookieManager(key="pool_master_cookies")
 
 def check_auto_login():
-    """Verifica si hay login automático disponible desde cookies"""
+    """
+    Verifica si hay una sesión guardada en cookies.
+    Retorna True si se restauró la sesión, False si no.
+    """
     try:
-        user_data = load_user_from_cookies()
+        cookies = get_cookie_manager()
+        token = cookies.get("pool_master_token")
         
-        if user_data and user_data.get('email'):
-            # Auto-login exitoso
-            st.session_state["user_email"] = user_data['email']
-            if user_data.get('picture'):
-                st.session_state["user_picture"] = user_data['picture']
-            
-            # Mostrar mensaje de bienvenida silencioso
-            st.session_state["auto_logged_in"] = True
-            return True
-        
+        if token:
+            try:
+                data = json.loads(token)
+                email = data.get("email")
+                picture = data.get("picture")
+                expires = data.get("expires")
+                
+                # Verificar expiración
+                if expires and datetime.datetime.fromisoformat(expires) > datetime.datetime.now():
+                    st.session_state["user_email"] = email
+                    if picture:
+                        st.session_state["user_picture"] = picture
+                    st.session_state["auto_logged_in"] = True
+                    return True
+                else:
+                    # Cookie expirada, limpiar
+                    clear_user_cookies()
+                    return False
+            except (json.JSONDecodeError, ValueError):
+                return False
         return False
-        
-    except Exception as e:
-        st.error(f"Error en auto-login: {e}")
+    except Exception:
         return False
 
-def extend_session():
-    """Extiende la sesión si el usuario está activo"""
+def save_user_to_cookies(email, picture=None, days=30):
+    """
+    Guarda los datos del usuario en cookies.
+    Retorna True si se guardó correctamente.
+    """
+    try:
+        cookies = get_cookie_manager()
+        
+        expires = datetime.datetime.now() + datetime.timedelta(days=days)
+        
+        data = json.dumps({
+            "email": email,
+            "picture": picture,
+            "expires": expires.isoformat()
+        })
+        
+        cookies.set("pool_master_token", data,
+                     expires_at=expires,
+                     key="set_pool_master_token")
+        return True
+    except Exception as e:
+        st.warning(f"⚠️ No se pudieron guardar las cookies: {e}")
+        return False
+
+def clear_user_cookies():
+    """
+    Elimina las cookies de sesión.
+    Retorna True si se eliminaron correctamente.
+    """
+    try:
+        cookies = get_cookie_manager()
+        cookies.delete("pool_master_token", key="delete_pool_master_token")
+        return True
+    except Exception:
+        return False
+
+def extend_session(days=30):
+    """
+    Extiende la sesión activa renovando la cookie.
+    Se llama silenciosamente en cada carga.
+    """
     try:
         if "user_email" in st.session_state:
-            # Renovar cookie con nueva fecha de expiración
-            save_user_to_cookies(
-                st.session_state["user_email"], 
-                st.session_state.get("user_picture")
-            )
-        
-    except Exception as e:
-        pass  # Silencioso, no crítico
+            # Solo extender cada 24h para no saturar
+            last_extend = st.session_state.get("last_session_extend")
+            now = datetime.datetime.now()
+            
+            if last_extend is None or (now - last_extend).total_seconds() > 86400:
+                save_user_to_cookies(
+                    st.session_state["user_email"],
+                    st.session_state.get("user_picture"),
+                    days=days
+                )
+                st.session_state["last_session_extend"] = now
+    except Exception:
+        pass  # Silencioso - no interrumpir la app
