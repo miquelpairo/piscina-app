@@ -5,4 +5,4 @@ gspread
 oauth2client
 authlib
 google-generativeai
-streamlit-cookies-manager
+extra-streamlit-components
