@@ -1,8 +1,8 @@
 streamlit>=1.34
 pandas
 plotly
-gspread
-oauth2client
+gspread>=5.12
+google-auth
 authlib
-google-generativeai
+google-genai
 extra-streamlit-components

@@ -1,5 +1,4 @@
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 import streamlit as st
 
 def get_user_spreadsheet_id(user_email: str) -> str:
@@ -21,10 +20,9 @@ def get_user_spreadsheet_id(user_email: str) -> str:
         "https://spreadsheets.google.com/feeds",
         "https://www.googleapis.com/auth/drive"
     ]
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(
-        st.secrets["gcp_service_account"], scope
+    client = gspread.service_account_from_dict(
+        dict(st.secrets["gcp_service_account"]), scopes=scope
     )
-    client = gspread.authorize(creds)
 
     # Abrir el archivo maestro de usuarios
     MASTER_SPREADSHEET_ID = "1jzuCIUZ44MGJOSQoHWDXU0KBZIVsB5tKY4xEG-AAPUg"
