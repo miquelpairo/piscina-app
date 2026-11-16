@@ -6,8 +6,7 @@ from plotly.subplots import make_subplots
 from datetime import datetime, date, time
 import streamlit.components.v1 as components
 import gspread
-import google.generativeai as genai
-from oauth2client.service_account import ServiceAccountCredentials
+from google import genai
 from auth_fixed import process_oauth_code, show_login_screen
 from user_lookup import get_user_spreadsheet_id
 from cookie_auth import check_auto_login, save_user_to_cookies, clear_user_cookies, extend_session
@@ -158,8 +157,7 @@ def init_google_sheets(spreadsheet_id):
             "token_uri": st.secrets["gcp_service_account"]["token_uri"],
         }
 
-        credentials = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-        gc = gspread.authorize(credentials)
+        gc = gspread.service_account_from_dict(creds_dict, scopes=scope)
 
         # Abrir hoja del usuario
         spreadsheet = gc.open_by_key(spreadsheet_id)
@@ -327,13 +325,27 @@ RANGES = {
 # 🤖 ANÁLISIS CON IA - GOOGLE GEMINI
 # ============================================================================
 
-@st.cache_data(ttl=300)  # Cache por 5 minutos
+class _GeminiModel:
+    """Envoltorio mínimo sobre el SDK google-genai con la misma interfaz que usaba
+    el SDK antiguo: model.generate_content(prompt).text"""
+
+    def __init__(self, client, model_name):
+        self._client = client
+        self.model_name = model_name
+
+    def generate_content(self, prompt):
+        return self._client.models.generate_content(model=self.model_name, contents=prompt)
+
+
+@st.cache_resource
 def configurar_gemini():
-    """Configura Google Gemini con la API key"""
+    """Configura Google Gemini con la API key.
+    Modelo por defecto: el alias 'gemini-flash-latest' (sigue al último Flash);
+    se puede fijar otro con GEMINI_MODEL en los secrets."""
     try:
-        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-        # Usar el modelo correcto disponible
-        return genai.GenerativeModel('gemini-1.5-flash')
+        client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
+        model_name = st.secrets.get("GEMINI_MODEL", "gemini-flash-latest")
+        return _GeminiModel(client, model_name)
     except Exception as e:
         st.error(f"Error configurando Gemini: {e}")
         return None

@@ -22,7 +22,12 @@ def process_oauth_code(code):
         
         email = user_info.get("email")
         picture = user_info.get("picture")
-        
+
+        # Solo aceptar emails verificados por Google
+        if email and user_info.get("email_verified") is not True:
+            st.error("❌ El email de esta cuenta de Google no está verificado.")
+            return None
+
         if email:
             if picture:
                 st.session_state["user_picture"] = picture
